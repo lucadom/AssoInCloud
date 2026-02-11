@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
-  Table,
-  TextInput,
+  MantineReactTable,
+  useMantineReactTable,
+  type MRT_ColumnDef,
+} from "mantine-react-table";
+import { MRT_Localization_IT } from "mantine-react-table/locales/it/index.esm.mjs";
+import {
   Text,
-  ScrollArea,
   Stack,
   Title,
   Loader,
   Center,
-  Group,
-  Pagination,
-  Select,
+  TextInput,
 } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import { IconSearch } from "@tabler/icons-react";
@@ -44,8 +45,6 @@ export function ProductsPage() {
   const [results, setResults] = useState<ProductSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
 
   const doSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -58,7 +57,6 @@ export function ProductsPage() {
       const data = await searchProducts(query.trim());
       setResults(data);
       setSearched(true);
-      setPage(1);
     } catch {
       setResults([]);
     } finally {
@@ -70,12 +68,104 @@ export function ProductsPage() {
     doSearch(debouncedSearch);
   }, [debouncedSearch, doSearch]);
 
-  const totalPages = Math.max(1, Math.ceil(results.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const paginatedRows = results.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize
+  const columns = useMemo<MRT_ColumnDef<ProductSearchResult>[]>(
+    () => [
+      {
+        accessorKey: "supplierName",
+        header: "Fornitore",
+        size: 200,
+      },
+      {
+        accessorKey: "invoiceDate",
+        header: "Data fattura",
+        size: 130,
+        Cell: ({ cell }) => formatDate(cell.getValue<string>()),
+      },
+      {
+        accessorKey: "description",
+        header: "Descrizione",
+        size: 300,
+      },
+      {
+        accessorKey: "quantity",
+        header: "Quantità",
+        size: 100,
+        mantineTableHeadCellProps: { align: "right" },
+        mantineTableBodyCellProps: { align: "right" },
+        Cell: ({ cell }) => formatQuantity(cell.getValue<number | null>()),
+      },
+      {
+        accessorKey: "unitOfMeasure",
+        header: "U.M.",
+        size: 80,
+        Cell: ({ cell }) => cell.getValue<string | null>() || "—",
+      },
+      {
+        accessorKey: "unitPrice",
+        header: "Prezzo unitario",
+        size: 130,
+        mantineTableHeadCellProps: { align: "right" },
+        mantineTableBodyCellProps: { align: "right" },
+        Cell: ({ cell }) => formatCurrency(cell.getValue<number | null>()),
+      },
+      {
+        accessorKey: "totalPrice",
+        header: "Totale",
+        size: 130,
+        mantineTableHeadCellProps: { align: "right" },
+        mantineTableBodyCellProps: { align: "right" },
+        Cell: ({ cell }) => (
+          <Text fw={600} size="sm">
+            {formatCurrency(cell.getValue<number | null>())}
+          </Text>
+        ),
+      },
+    ],
+    [],
   );
+
+  const table = useMantineReactTable({
+    columns,
+    data: results,
+    enableColumnFilterModes: true,
+    enableColumnOrdering: true,
+    enableFacetedValues: true,
+    enableSorting: true,
+    enableGlobalFilter: false,
+    getRowId: (row) => row.lineItemId,
+    localization: MRT_Localization_IT,
+    initialState: {
+      density: "xs",
+    },
+    state: {
+      isLoading: loading,
+    },
+    paginationDisplayMode: "pages",
+    mantinePaginationProps: {
+      radius: "md",
+      size: "sm",
+    },
+    renderEmptyRowsFallback: () => (
+      <Center py="xl">
+        <Text c="dimmed">
+          {!searched
+            ? "Inserisci un termine di ricerca per trovare i prodotti nelle fatture. Usa * come carattere jolly (es: the*limone*12)."
+            : "Nessun prodotto trovato."}
+        </Text>
+      </Center>
+    ),
+    renderTopToolbarCustomActions: () => (
+      <Text size="sm" c="dimmed" pl="sm">
+        {searched ? `${results.length} risultat${results.length === 1 ? "o" : "i"} trovat${results.length === 1 ? "o" : "i"}` : ""}
+      </Text>
+    ),
+    mantineTableProps: {
+      striped: true,
+      highlightOnHover: true,
+      withTableBorder: true,
+      withColumnBorders: true,
+    },
+  });
 
   return (
     <Stack gap="md">
@@ -90,80 +180,15 @@ export function ProductsPage() {
         size="md"
       />
 
-      {!searched && !loading && (
+      {!searched && !loading ? (
         <Center py="xl">
           <Text c="dimmed" size="lg">
             Inserisci un termine di ricerca per trovare i prodotti nelle fatture.
             Usa * come carattere jolly (es: the*limone*12).
           </Text>
         </Center>
-      )}
-
-      {searched && results.length === 0 && !loading && (
-        <Center py="xl">
-          <Text c="dimmed">Nessun prodotto trovato.</Text>
-        </Center>
-      )}
-
-      {results.length > 0 && (
-        <>
-          <Text size="sm" c="dimmed">
-            {results.length} risultat{results.length === 1 ? "o" : "i"} trovat{results.length === 1 ? "o" : "i"}
-          </Text>
-
-          <ScrollArea>
-            <Table striped highlightOnHover withTableBorder withColumnBorders>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Fornitore</Table.Th>
-                  <Table.Th>Data fattura</Table.Th>
-                  <Table.Th>Descrizione</Table.Th>
-                  <Table.Th ta="right">Quantità</Table.Th>
-                  <Table.Th>U.M.</Table.Th>
-                  <Table.Th ta="right">Prezzo unitario</Table.Th>
-                  <Table.Th ta="right">Totale</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {paginatedRows.map((item) => (
-                  <Table.Tr key={item.lineItemId}>
-                    <Table.Td>{item.supplierName}</Table.Td>
-                    <Table.Td>{formatDate(item.invoiceDate)}</Table.Td>
-                    <Table.Td>{item.description}</Table.Td>
-                    <Table.Td ta="right">{formatQuantity(item.quantity)}</Table.Td>
-                    <Table.Td>{item.unitOfMeasure || "—"}</Table.Td>
-                    <Table.Td ta="right">{formatCurrency(item.unitPrice)}</Table.Td>
-                    <Table.Td ta="right" fw={600}>{formatCurrency(item.totalPrice)}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </ScrollArea>
-
-          {results.length > pageSize && (
-            <Group justify="space-between" mt="sm" wrap="wrap" gap="sm">
-              <Group gap="xs" align="center">
-                <Text size="sm" c="dimmed">Righe per pagina:</Text>
-                <Select
-                  data={["25", "50", "100", "200"]}
-                  value={String(pageSize)}
-                  onChange={(v) => { if (v) { setPageSize(Number(v)); setPage(1); } }}
-                  w={80}
-                  size="xs"
-                />
-              </Group>
-              <Pagination
-                total={totalPages}
-                value={safePage}
-                onChange={setPage}
-                size="sm"
-              />
-              <Text size="sm" c="dimmed">
-                {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, results.length)} di {results.length}
-              </Text>
-            </Group>
-          )}
-        </>
+      ) : (
+        <MantineReactTable table={table} />
       )}
     </Stack>
   );

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { ProductsPage } from "./products-page";
 import { TestWrapper } from "@/test-utils";
@@ -15,8 +15,6 @@ const mockSearch = vi.mocked(searchProducts);
 const results: ProductSearchResult[] = [
   {
     lineItemId: "li-1",
-    invoiceId: "inv-1",
-    invoiceNumber: "1/2024",
     invoiceDate: "2024-06-15",
     supplierName: "Alfa SRL",
     description: "Caffè espresso",
@@ -27,8 +25,6 @@ const results: ProductSearchResult[] = [
   },
   {
     lineItemId: "li-2",
-    invoiceId: "inv-1",
-    invoiceNumber: "1/2024",
     invoiceDate: "2024-07-20",
     supplierName: "Beta SpA",
     description: "Tè verde",
@@ -207,7 +203,8 @@ describe("ProductsPage", () => {
     expect(screen.getByText("Quantità")).toBeInTheDocument();
     expect(screen.getByText("U.M.")).toBeInTheDocument();
     expect(screen.getByText("Prezzo unitario")).toBeInTheDocument();
-    expect(screen.getByText("Totale")).toBeInTheDocument();
+    // "Totale" column header
+    expect(screen.getByRole("columnheader", { name: /Totale/ })).toBeInTheDocument();
   });
 
   it("should use singular text when 1 result", async () => {

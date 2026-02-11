@@ -29,6 +29,8 @@ const mockGetToken = vi.mocked(getToken);
 const sampleInvoice: Invoice = {
   id: "inv-1",
   documentType: "Fattura",
+  documentTypeDescription: "Fattura",
+  creditNote: false,
   invoiceNumber: "1/2024",
   date: "2024-01-15",
   supplier: { id: "s1", name: "Test SRL", vatNumber: "IT12345678901", invoiceCount: 1 },

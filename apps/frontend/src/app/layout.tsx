@@ -4,6 +4,7 @@ import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/notifications/styles.css";
+import "mantine-react-table/styles.css";
 
 import type { Metadata, Viewport } from "next";
 import {
@@ -11,8 +12,10 @@ import {
   MantineProvider,
   mantineHtmlProps,
 } from "@mantine/core";
+import { DatesProvider } from "@mantine/dates";
 import { Notifications } from "@mantine/notifications";
 import { theme } from "../../theme";
+import { DatesLocaleProvider } from "@/components/dates-locale-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -38,8 +41,12 @@ export default function RootLayout({
       </head>
       <body>
         <MantineProvider theme={theme}>
-          <Notifications position="top-right" />
-          {children}
+          <DatesLocaleProvider>
+            <DatesProvider settings={{ locale: "it" }}>
+              <Notifications position="top-right" />
+              {children}
+            </DatesProvider>
+          </DatesLocaleProvider>
         </MantineProvider>
       </body>
     </html>

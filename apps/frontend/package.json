@@ -21,6 +21,7 @@
     "@mantine/notifications": "^8.3.14",
     "@tabler/icons-react": "^3.36.1",
     "dayjs": "^1.11.19",
+    "mantine-react-table": "^2.0.0-beta.9",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

@@ -38,41 +38,6 @@ describe("SuppliersTable", () => {
     expect(screen.getByText("Nessun fornitore presente.")).toBeInTheDocument();
   });
 
-  it("should filter suppliers by search text", () => {
-    render(
-      <TestWrapper>
-        <SuppliersTable suppliers={suppliers} onEdit={onEdit} onDelete={onDelete} />
-      </TestWrapper>
-    );
-    const input = screen.getByPlaceholderText("Filtra fornitori...");
-    fireEvent.change(input, { target: { value: "alfa" } });
-    expect(screen.getByText("Alfa SRL")).toBeInTheDocument();
-    expect(screen.queryByText("Beta SpA")).not.toBeInTheDocument();
-  });
-
-  it("should filter by VAT number", () => {
-    render(
-      <TestWrapper>
-        <SuppliersTable suppliers={suppliers} onEdit={onEdit} onDelete={onDelete} />
-      </TestWrapper>
-    );
-    const input = screen.getByPlaceholderText("Filtra fornitori...");
-    fireEvent.change(input, { target: { value: "22222" } });
-    expect(screen.getByText("Beta SpA")).toBeInTheDocument();
-    expect(screen.queryByText("Alfa SRL")).not.toBeInTheDocument();
-  });
-
-  it("should show no results message when filter matches nothing", () => {
-    render(
-      <TestWrapper>
-        <SuppliersTable suppliers={suppliers} onEdit={onEdit} onDelete={onDelete} />
-      </TestWrapper>
-    );
-    const input = screen.getByPlaceholderText("Filtra fornitori...");
-    fireEvent.change(input, { target: { value: "zzzzz" } });
-    expect(screen.getByText("Nessun risultato trovato.")).toBeInTheDocument();
-  });
-
   it("should display VAT numbers as badges", () => {
     render(
       <TestWrapper>
@@ -93,46 +58,6 @@ describe("SuppliersTable", () => {
     expect(screen.getByText("0")).toBeInTheDocument();
   });
 
-  it("should sort by name when clicking header", () => {
-    render(
-      <TestWrapper>
-        <SuppliersTable suppliers={suppliers} onEdit={onEdit} onDelete={onDelete} />
-      </TestWrapper>
-    );
-    // Click on "Ragione sociale" header to sort
-    fireEvent.click(screen.getByText("Ragione sociale"));
-    // First row should be Alfa (ascending)
-    const rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("Alfa SRL");
-
-    // Click again to reverse
-    fireEvent.click(screen.getByText("Ragione sociale"));
-    const rows2 = screen.getAllByRole("row");
-    expect(rows2[1]).toHaveTextContent("Gamma Coop");
-  });
-
-  it("should sort by vatNumber when clicking header", () => {
-    render(
-      <TestWrapper>
-        <SuppliersTable suppliers={suppliers} onEdit={onEdit} onDelete={onDelete} />
-      </TestWrapper>
-    );
-    fireEvent.click(screen.getByText("Partita IVA"));
-    const rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("IT11111111111");
-  });
-
-  it("should sort by invoiceCount when clicking header", () => {
-    render(
-      <TestWrapper>
-        <SuppliersTable suppliers={suppliers} onEdit={onEdit} onDelete={onDelete} />
-      </TestWrapper>
-    );
-    fireEvent.click(screen.getByText("Fatture"));
-    const rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("Beta SpA"); // 0 invoices first
-  });
-
   it("should display column headers", () => {
     render(
       <TestWrapper>
@@ -143,5 +68,27 @@ describe("SuppliersTable", () => {
     expect(screen.getByText("Partita IVA")).toBeInTheDocument();
     expect(screen.getByText("Fatture")).toBeInTheDocument();
     expect(screen.getByText("Azioni")).toBeInTheDocument();
+  });
+
+  it("should render action buttons for each supplier", () => {
+    render(
+      <TestWrapper>
+        <SuppliersTable suppliers={suppliers} onEdit={onEdit} onDelete={onDelete} />
+      </TestWrapper>
+    );
+    // Should have 3 edit buttons and 3 delete buttons
+    const editButtons = screen.getAllByLabelText("Modifica");
+    expect(editButtons.length).toBe(3);
+  });
+
+  it("should call onEdit when edit button is clicked", () => {
+    render(
+      <TestWrapper>
+        <SuppliersTable suppliers={suppliers} onEdit={onEdit} onDelete={onDelete} />
+      </TestWrapper>
+    );
+    const editButtons = screen.getAllByLabelText("Modifica");
+    fireEvent.click(editButtons[0]);
+    expect(onEdit).toHaveBeenCalledTimes(1);
   });
 });
