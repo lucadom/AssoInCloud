@@ -274,13 +274,13 @@ export function InvoicesTable({
 
   return (
     <>
-      <Group gap="sm" mb="sm" align="flex-end">
+      <Group gap="sm" mb="sm" align="flex-end" wrap="wrap">
         <TextInput
           placeholder="Filtra fatture..."
           leftSection={<IconSearch size={16} />}
           value={search}
           onChange={(e) => handleSearchChange(e.currentTarget.value)}
-          style={{ flex: 1 }}
+          style={{ flex: "1 1 200px" }}
         />
         <DatePickerInput
           type="range"
@@ -291,23 +291,25 @@ export function InvoicesTable({
           valueFormat="DD/MM/YYYY"
           leftSection={<IconCalendar size={16} />}
           clearable
-          w={280}
+          style={{ flex: "1 1 200px" }}
         />
       </Group>
-      <SegmentedControl
-        value={datePreset}
-        onChange={handlePresetChange}
-        data={[
-          { label: "Tutte", value: "all" },
-          { label: "Ultimo mese", value: "lastMonth" },
-          { label: "Ultimi 3 mesi", value: "last3Months" },
-          { label: "Ultimi 6 mesi", value: "last6Months" },
-          { label: "Anno corrente", value: "thisYear" },
-          { label: "Personalizzato", value: "custom" },
-        ]}
-        mb="sm"
-        size="xs"
-      />
+      <ScrollArea type="scroll" offsetScrollbars={false} mb="sm">
+        <SegmentedControl
+          value={datePreset}
+          onChange={handlePresetChange}
+          data={[
+            { label: "Tutte", value: "all" },
+            { label: "Ultimo mese", value: "lastMonth" },
+            { label: "Ultimi 3 mesi", value: "last3Months" },
+            { label: "Ultimi 6 mesi", value: "last6Months" },
+            { label: "Anno corrente", value: "thisYear" },
+            { label: "Personalizzato", value: "custom" },
+          ]}
+          size="xs"
+          style={{ minWidth: "fit-content" }}
+        />
+      </ScrollArea>
       <ScrollArea>
         <Table striped highlightOnHover withTableBorder withColumnBorders>
           <Table.Thead>
@@ -412,7 +414,7 @@ export function InvoicesTable({
         </Table>
       </ScrollArea>
       {filtered.length > 0 && (
-        <Group justify="space-between" mt="sm">
+        <Group justify="space-between" mt="sm" wrap="wrap" gap="sm">
           <Group gap="xs" align="center">
             <Text size="sm" c="dimmed">
               Righe per pagina:

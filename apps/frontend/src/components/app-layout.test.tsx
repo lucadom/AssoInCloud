@@ -46,13 +46,13 @@ describe("AppLayout", () => {
     expect(screen.getByText("Prodotti")).toBeInTheDocument();
   });
 
-  it("should render Menu title", () => {
+  it("should render app title in header", () => {
     render(
       <TestWrapper>
         <AppLayout />
       </TestWrapper>
     );
-    expect(screen.getByText("Menu")).toBeInTheDocument();
+    expect(screen.getByText("AssoInCloud")).toBeInTheDocument();
   });
 
   it("should show InvoicesPage by default", () => {

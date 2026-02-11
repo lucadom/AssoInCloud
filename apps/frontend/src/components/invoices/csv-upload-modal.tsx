@@ -9,6 +9,7 @@ import {
   Stack,
   rem,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { Dropzone, MIME_TYPES } from "@mantine/dropzone";
 import { IconUpload, IconFileSpreadsheet, IconX } from "@tabler/icons-react";
 
@@ -26,6 +27,7 @@ export function CsvUploadModal({
   loading,
 }: CsvUploadModalProps) {
   const openRef = useRef<(() => void) | null>(null);
+  const isMobile = useMediaQuery("(max-width: 48em)");
 
   return (
     <Modal
@@ -33,6 +35,7 @@ export function CsvUploadModal({
       onClose={onClose}
       title="Carica CSV"
       size="lg"
+      fullScreen={!!isMobile}
       centered
     >
       <Stack gap="md">

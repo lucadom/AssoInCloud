@@ -14,6 +14,7 @@ import {
   ActionIcon,
   Tooltip,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { IconDownload, IconEye, IconFileTypePdf } from "@tabler/icons-react";
 import type { Invoice } from "@/types";
 import { getAttachmentUrl } from "@/lib/api/invoices";
@@ -76,6 +77,7 @@ export function InvoiceDetailModal({
   onClose,
 }: InvoiceDetailModalProps) {
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const isMobile = useMediaQuery("(max-width: 48em)");
 
   if (!invoice) return null;
 
@@ -93,12 +95,13 @@ export function InvoiceDetailModal({
         }}
         title="Dettaglio Fattura"
         size="90%"
+        fullScreen={!!isMobile}
         centered
-        styles={{ body: { maxHeight: "80vh", overflowY: "auto" } }}
+        styles={{ body: { maxHeight: isMobile ? undefined : "80vh", overflowY: "auto" } }}
       >
         <Stack gap="md">
           {/* Header info */}
-          <Group justify="space-between">
+          <Group justify="space-between" wrap="wrap" gap="md">
             <div>
               <Text size="sm" c="dimmed">
                 Tipo documento
@@ -157,7 +160,7 @@ export function InvoiceDetailModal({
           <Divider />
 
           {/* Amounts */}
-          <Group justify="space-between">
+          <Group justify="space-between" wrap="wrap" gap="md">
             <div>
               <Text size="sm" c="dimmed">
                 Imponibile
@@ -183,7 +186,7 @@ export function InvoiceDetailModal({
           <Divider />
 
           {/* SDI and status */}
-          <Group justify="space-between">
+          <Group justify="space-between" wrap="wrap" gap="md">
             <div>
               <Text size="sm" c="dimmed">
                 Numero SDI
@@ -215,7 +218,7 @@ export function InvoiceDetailModal({
               <Text fw={600} size="md">
                 Dati Pagamento
               </Text>
-              <Group justify="space-between">
+              <Group justify="space-between" wrap="wrap" gap="md">
                 {invoice.paymentMethod && (
                   <div>
                     <Text size="sm" c="dimmed">

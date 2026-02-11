@@ -65,8 +65,8 @@ export default function LoginPage() {
   }
 
   return (
-    <Center mih="100vh">
-      <Card shadow="md" padding="xl" radius="md" withBorder w={400}>
+    <Center mih="100vh" p="md">
+      <Card shadow="md" padding="xl" radius="md" withBorder w="100%" maw={400}>
         <Stack align="center" gap="md">
           <IconLock size={48} stroke={1.5} />
           <Title order={2}>AssoInCloud</Title>

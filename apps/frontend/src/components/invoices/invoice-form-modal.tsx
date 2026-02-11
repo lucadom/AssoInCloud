@@ -7,10 +7,12 @@ import {
   NumberInput,
   Button,
   Group,
+  SimpleGrid,
   Stack,
   Select,
   Switch,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import type { Invoice } from "@/types";
@@ -42,6 +44,7 @@ export function InvoiceFormModal({
   onSubmit,
   loading,
 }: InvoiceFormModalProps) {
+  const isMobile = useMediaQuery("(max-width: 48em)");
   const form = useForm<InvoiceFormValues>({
     initialValues: {
       documentType: "",
@@ -94,11 +97,12 @@ export function InvoiceFormModal({
       onClose={onClose}
       title={invoice ? "Modifica Fattura" : "Nuova Fattura"}
       size="lg"
+      fullScreen={!!isMobile}
       centered
     >
       <form onSubmit={form.onSubmit(onSubmit)}>
         <Stack gap="md">
-          <Group grow>
+          <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <Select
               label="Tipo documento"
               placeholder="Seleziona tipo"
@@ -114,18 +118,16 @@ export function InvoiceFormModal({
               placeholder="Es. 1/11017"
               {...form.getInputProps("invoiceNumber")}
             />
-          </Group>
+          </SimpleGrid>
 
-          <Group grow>
-            <DatePickerInput
-              label="Data emissione"
-              placeholder="Seleziona data"
-              valueFormat="DD/MM/YYYY"
-              {...form.getInputProps("date")}
-            />
-          </Group>
+          <DatePickerInput
+            label="Data emissione"
+            placeholder="Seleziona data"
+            valueFormat="DD/MM/YYYY"
+            {...form.getInputProps("date")}
+          />
 
-          <Group grow>
+          <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
               label="Fornitore"
               placeholder="Ragione sociale"
@@ -136,9 +138,9 @@ export function InvoiceFormModal({
               placeholder="Es. 01234567890"
               {...form.getInputProps("supplierVatNumber")}
             />
-          </Group>
+          </SimpleGrid>
 
-          <Group grow>
+          <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <NumberInput
               label="Imponibile / Importo (€)"
               placeholder="0,00"
@@ -157,9 +159,9 @@ export function InvoiceFormModal({
               min={0}
               {...form.getInputProps("taxAmount")}
             />
-          </Group>
+          </SimpleGrid>
 
-          <Group grow>
+          <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
               label="Numero SDI"
               placeholder="Es. 13699991347"
@@ -170,7 +172,7 @@ export function InvoiceFormModal({
               mt="md"
               {...form.getInputProps("viewed", { type: "checkbox" })}
             />
-          </Group>
+          </SimpleGrid>
 
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose}>

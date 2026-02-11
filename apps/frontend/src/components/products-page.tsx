@@ -141,7 +141,7 @@ export function ProductsPage() {
           </ScrollArea>
 
           {results.length > pageSize && (
-            <Group justify="space-between" mt="sm">
+            <Group justify="space-between" mt="sm" wrap="wrap" gap="sm">
               <Group gap="xs" align="center">
                 <Text size="sm" c="dimmed">Righe per pagina:</Text>
                 <Select

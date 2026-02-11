@@ -9,6 +9,7 @@ import {
   Stack,
   rem,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { Dropzone } from "@mantine/dropzone";
 import { IconUpload, IconFileText, IconX } from "@tabler/icons-react";
 
@@ -33,6 +34,7 @@ export function InvoiceUploadModal({
   loading,
 }: InvoiceUploadModalProps) {
   const openRef = useRef<(() => void) | null>(null);
+  const isMobile = useMediaQuery("(max-width: 48em)");
 
   return (
     <Modal
@@ -40,6 +42,7 @@ export function InvoiceUploadModal({
       onClose={onClose}
       title="Carica Fattura"
       size="lg"
+      fullScreen={!!isMobile}
       centered
     >
       <Stack gap="md">

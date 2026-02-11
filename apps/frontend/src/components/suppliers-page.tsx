@@ -116,9 +116,9 @@ export function SuppliersPage() {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="center">
+      <Group justify="space-between" align="center" wrap="wrap" gap="sm">
         <Title order={2}>Fornitori</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
+        <Button leftSection={<IconPlus size={16} />} onClick={handleCreate} size="sm">
           Nuovo Fornitore
         </Button>
       </Group>

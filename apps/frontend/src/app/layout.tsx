@@ -5,7 +5,7 @@ import "@mantine/dates/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/notifications/styles.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   ColorSchemeScript,
   MantineProvider,
@@ -18,6 +18,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "AssoInCloud",
   description: "Gestione fatture elettroniche per associazioni e onlus",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

@@ -188,13 +188,14 @@ export function InvoicesPage() {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="center">
+      <Group justify="space-between" align="center" wrap="wrap" gap="sm">
         <Title order={2}>Fatture</Title>
-        <Group gap="sm">
+        <Group gap="sm" wrap="wrap">
           <Button
             variant="light"
             leftSection={<IconFileSpreadsheet size={16} />}
             onClick={csvModalHandlers.open}
+            size="sm"
           >
             Carica CSV
           </Button>
@@ -202,12 +203,14 @@ export function InvoicesPage() {
             variant="light"
             leftSection={<IconFileText size={16} />}
             onClick={invoiceUploadModalHandlers.open}
+            size="sm"
           >
             Carica Fattura
           </Button>
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={handleCreate}
+            size="sm"
           >
             Nuova Fattura
           </Button>
