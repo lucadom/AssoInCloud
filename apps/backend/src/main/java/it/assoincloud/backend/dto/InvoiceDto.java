@@ -6,6 +6,7 @@ import java.util.List;
 import it.assoincloud.backend.entity.Invoice;
 import it.assoincloud.backend.entity.InvoiceAttachment;
 import it.assoincloud.backend.entity.InvoiceLineItem;
+import it.assoincloud.backend.util.DocumentTypeUtil;
 
 /**
  * JSON representation of an invoice returned to the frontend.
@@ -13,6 +14,8 @@ import it.assoincloud.backend.entity.InvoiceLineItem;
 public record InvoiceDto(
     String id,
     String documentType,
+    String documentTypeDescription,
+    boolean creditNote,
     String invoiceNumber,
     String date,
     SupplierDto supplier,
@@ -45,9 +48,12 @@ public record InvoiceDto(
                 ? entity.getAttachments().stream().map(AttachmentDto::from).toList()
                 : List.of();
 
+        String docType = entity.getDocumentType() != null ? entity.getDocumentType() : "";
         return new InvoiceDto(
             entity.getId(),
-            entity.getDocumentType() != null ? entity.getDocumentType() : "",
+            docType,
+            DocumentTypeUtil.getDescription(docType),
+            DocumentTypeUtil.isCreditNote(docType),
             entity.getInvoiceNumber(),
             entity.getDate().toString(),
             SupplierDto.from(entity.getSupplier()),

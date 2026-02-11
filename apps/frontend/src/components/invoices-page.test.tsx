@@ -31,7 +31,9 @@ const mockCreateInvoice = vi.mocked(api.createInvoice);
 const invoices: Invoice[] = [
   {
     id: "inv-1",
-    documentType: "Fattura",
+    documentType: "TD01",
+    documentTypeDescription: "Fattura",
+    creditNote: false,
     invoiceNumber: "1/2024",
     date: "2024-06-15",
     supplier: { id: "s1", name: "Alfa SRL", vatNumber: "IT11111111111", invoiceCount: 1 },

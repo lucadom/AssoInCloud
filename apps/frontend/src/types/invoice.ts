@@ -40,6 +40,8 @@ export interface InvoiceAttachment {
 export interface Invoice {
   id: string;
   documentType: string;    // Tipo documento (e.g. "TD24")
+  documentTypeDescription: string; // Descrizione tipo documento (e.g. "Fattura differita...")
+  creditNote: boolean;     // True if TD04 / Nota di credito
   invoiceNumber: string;   // Numero fattura / Documento
   date: string;            // Data emissione fattura (ISO date string)
   supplier: Supplier;

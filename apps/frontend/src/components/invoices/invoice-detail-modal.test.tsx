@@ -6,7 +6,9 @@ import type { Invoice } from "@/types";
 
 const sampleInvoice: Invoice = {
   id: "inv-1",
-  documentType: "Fattura",
+  documentType: "TD01",
+  documentTypeDescription: "Fattura",
+  creditNote: false,
   invoiceNumber: "42/2024",
   date: "2024-06-15",
   supplier: { id: "s1", name: "Test SRL", vatNumber: "IT12345678901", invoiceCount: 1 },

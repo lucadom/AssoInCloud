@@ -108,8 +108,28 @@ export function InvoiceFormModal({
               placeholder="Seleziona tipo"
               data={[
                 { value: "", label: "(nessuno)" },
-                { value: "Fattura", label: "Fattura" },
+                { value: "TD01", label: "TD01 — Fattura" },
+                { value: "TD02", label: "TD02 — Acconto/Anticipo su fattura" },
+                { value: "TD03", label: "TD03 — Acconto/Anticipo su parcella" },
+                { value: "TD04", label: "TD04 — Nota di Credito" },
+                { value: "TD05", label: "TD05 — Nota di Debito" },
+                { value: "TD06", label: "TD06 — Parcella" },
+                { value: "TD16", label: "TD16 — Integrazione fattura reverse charge interno" },
+                { value: "TD17", label: "TD17 — Integrazione/autofattura acquisto servizi estero" },
+                { value: "TD18", label: "TD18 — Integrazione acquisto beni intracomunitari" },
+                { value: "TD19", label: "TD19 — Integrazione/autofattura acquisto beni ex art.17" },
+                { value: "TD20", label: "TD20 — Autofattura regolarizzazione" },
+                { value: "TD21", label: "TD21 — Autofattura per splafonamento" },
+                { value: "TD22", label: "TD22 — Estrazione beni da Deposito IVA" },
+                { value: "TD23", label: "TD23 — Estrazione beni da Deposito IVA con IVA" },
+                { value: "TD24", label: "TD24 — Fattura differita lett. a)" },
+                { value: "TD25", label: "TD25 — Fattura differita lett. b)" },
+                { value: "TD26", label: "TD26 — Cessione beni ammortizzabili" },
+                { value: "TD27", label: "TD27 — Autoconsumo/cessioni gratuite" },
+                { value: "TD28", label: "TD28 — Acquisti da San Marino con IVA" },
+                { value: "TD29", label: "TD29 — Comunicazione omessa/irregolare fatturazione" },
               ]}
+              searchable
               allowDeselect={false}
               {...form.getInputProps("documentType")}
             />

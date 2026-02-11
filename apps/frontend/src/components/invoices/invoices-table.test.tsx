@@ -6,7 +6,9 @@ import type { Invoice } from "@/types";
 
 const makeInvoice = (overrides: Partial<Invoice> = {}): Invoice => ({
   id: "inv-1",
-  documentType: "Fattura",
+  documentType: "TD01",
+  documentTypeDescription: "Fattura",
+  creditNote: false,
   invoiceNumber: "1/2024",
   date: "2024-06-15",
   supplier: { id: "s1", name: "Alfa SRL", vatNumber: "IT11111111111", invoiceCount: 1 },
@@ -23,7 +25,7 @@ const makeInvoice = (overrides: Partial<Invoice> = {}): Invoice => ({
 const invoices: Invoice[] = [
   makeInvoice({ id: "inv-1", invoiceNumber: "1/2024", supplier: { id: "s1", name: "Alfa SRL", vatNumber: "IT11111111111", invoiceCount: 1 } }),
   makeInvoice({ id: "inv-2", invoiceNumber: "2/2024", date: "2024-07-20", supplier: { id: "s2", name: "Beta SpA", vatNumber: "IT22222222222", invoiceCount: 1 }, taxableAmount: 500, taxAmount: 110, totalAmount: 610 }),
-  makeInvoice({ id: "inv-3", invoiceNumber: "NC/1", documentType: "Nota di credito", supplier: { id: "s3", name: "Gamma Coop", vatNumber: "IT33333333333", invoiceCount: 1 }, taxableAmount: 200, taxAmount: 44, totalAmount: 244 }),
+  makeInvoice({ id: "inv-3", invoiceNumber: "NC/1", documentType: "TD04", documentTypeDescription: "Nota di Credito", creditNote: true, supplier: { id: "s3", name: "Gamma Coop", vatNumber: "IT33333333333", invoiceCount: 1 }, taxableAmount: 200, taxAmount: 44, totalAmount: 244 }),
 ];
 
 describe("InvoicesTable", () => {
@@ -211,7 +213,7 @@ describe("InvoicesTable", () => {
         <InvoicesTable invoices={invoices} onView={onView} onEdit={onEdit} onDelete={onDelete} />
       </TestWrapper>
     );
-    // Gamma Coop is a "Nota di credito" so amounts should be negative
-    expect(screen.getByText("Nota di credito")).toBeInTheDocument();
+    // Gamma Coop is a credit note (TD04) so amounts should be negative
+    expect(screen.getByText("Nota di Credito")).toBeInTheDocument();
   });
 });

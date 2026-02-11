@@ -125,7 +125,7 @@ function getValue(invoice: Invoice, field: SortField): string | number {
   }
 }
 
-type DatePreset = "all" | "lastMonth" | "last3Months" | "last6Months" | "thisYear" | "custom";
+type DatePreset = "all" | "lastMonth" | "previousMonth" | "last3Months" | "last6Months" | "thisYear" | "previousYear" | "custom";
 
 function getPresetRange(preset: DatePreset): [Date | null, Date | null] {
   const now = new Date();
@@ -135,6 +135,11 @@ function getPresetRange(preset: DatePreset): [Date | null, Date | null] {
       const from = new Date(today);
       from.setMonth(from.getMonth() - 1);
       return [from, today];
+    }
+    case "previousMonth": {
+      const from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const to = new Date(today.getFullYear(), today.getMonth(), 0); // last day of previous month
+      return [from, to];
     }
     case "last3Months": {
       const from = new Date(today);
@@ -148,6 +153,11 @@ function getPresetRange(preset: DatePreset): [Date | null, Date | null] {
     }
     case "thisYear":
       return [new Date(today.getFullYear(), 0, 1), today];
+    case "previousYear": {
+      const from = new Date(today.getFullYear() - 1, 0, 1);
+      const to = new Date(today.getFullYear() - 1, 11, 31);
+      return [from, to];
+    }
     default:
       return [null, null];
   }
@@ -214,7 +224,7 @@ export function InvoicesTable({
     if (q) {
       result = result.filter(
         (inv) =>
-          (inv.documentType || "").toLowerCase().includes(q) ||
+          (inv.documentTypeDescription || inv.documentType || "").toLowerCase().includes(q) ||
           inv.invoiceNumber.toLowerCase().includes(q) ||
           formatDate(inv.date).includes(q) ||
           inv.supplier.name.toLowerCase().includes(q) ||
@@ -244,7 +254,7 @@ export function InvoicesTable({
     let taxAmount = 0;
     let totalAmount = 0;
     for (const inv of filtered) {
-      const sign = inv.documentType === "Nota di credito" ? -1 : 1;
+      const sign = inv.creditNote ? -1 : 1;
       taxableAmount += sign * inv.taxableAmount;
       taxAmount += sign * inv.taxAmount;
       totalAmount += sign * inv.totalAmount;
@@ -301,9 +311,11 @@ export function InvoicesTable({
           data={[
             { label: "Tutte", value: "all" },
             { label: "Ultimo mese", value: "lastMonth" },
+            { label: "Mese precedente", value: "previousMonth" },
             { label: "Ultimi 3 mesi", value: "last3Months" },
             { label: "Ultimi 6 mesi", value: "last6Months" },
             { label: "Anno corrente", value: "thisYear" },
+            { label: "Anno precedente", value: "previousYear" },
             { label: "Personalizzato", value: "custom" },
           ]}
           size="xs"
@@ -337,10 +349,17 @@ export function InvoicesTable({
               </Table.Tr>
             )}
             {paginatedRows.map((invoice) => {
-              const isCreditNote = invoice.documentType === "Nota di credito";
+              const isCreditNote = invoice.creditNote;
               return (
               <Table.Tr key={invoice.id}>
-                <Table.Td>{invoice.documentType || "—"}</Table.Td>
+                <Table.Td>
+                  {(() => {
+                    const label = invoice.documentTypeDescription || invoice.documentType || "—";
+                    return label.length > 20
+                      ? <Tooltip label={label}><Text size="sm" component="span">{label.slice(0, 20)}…</Text></Tooltip>
+                      : label;
+                  })()}
+                </Table.Td>
                 <Table.Td>{invoice.invoiceNumber}</Table.Td>
                 <Table.Td>{formatDate(invoice.date)}</Table.Td>
                 <Table.Td>{invoice.supplier.name}</Table.Td>

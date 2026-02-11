@@ -106,7 +106,7 @@ export function InvoiceDetailModal({
               <Text size="sm" c="dimmed">
                 Tipo documento
               </Text>
-              <Text fw={500}>{invoice.documentType || "—"}</Text>
+              <Text fw={500}>{invoice.documentTypeDescription || invoice.documentType || "—"}</Text>
             </div>
             <div>
               <Text size="sm" c="dimmed">
