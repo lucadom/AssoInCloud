@@ -35,7 +35,7 @@ WORKDIR /build
 COPY apps/frontend/package.json apps/frontend/package-lock.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY apps/frontend/ .
