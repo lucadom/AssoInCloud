@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: backend
+
+  datasource:
+    url: jdbc:sqlite:${ASSOINCLOUD_DB_PATH:./data/assoincloud.db}
+    driver-class-name: org.sqlite.JDBC
+
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+  flyway:
+    locations: classpath:db/migration
+
+assoincloud:
+  password: ${ASSOINCLOUD_PASSWORD:}
+
+server:
+  tomcat:
+    max-part-count: -1
+    max-part-header-size: -1

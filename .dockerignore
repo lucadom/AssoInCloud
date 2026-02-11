@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.iml
+*.swp
+
+# Build output
+apps/backend/target
+apps/frontend/.next
+apps/frontend/node_modules
+
+# Data
+data/
+
+# Documentation
+*.md
+
+# Docker (avoid recursive copy)
+Dockerfile
+docker-compose.yml
+.dockerignore

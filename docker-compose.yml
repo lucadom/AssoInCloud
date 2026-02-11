@@ -1,0 +1,31 @@
+services:
+  assoincloud:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: assoincloud
+    restart: unless-stopped
+    ports:
+      - "${ASSOINCLOUD_PORT:-80}:80"
+    environment:
+      # Path to the SQLite database file inside the container.
+      # The /data directory is mounted as a volume for persistence.
+      ASSOINCLOUD_DB_PATH: "${ASSOINCLOUD_DB_PATH:-/data/assoincloud.db}"
+
+      # Access password. When set, the application requires this password
+      # to log in. When empty, no authentication is required.
+      ASSOINCLOUD_PASSWORD: "${ASSOINCLOUD_PASSWORD:-}"
+
+      # Internal ports (normally you don't need to change these)
+      SERVER_PORT: "${SERVER_PORT:-8080}"
+      FRONTEND_PORT: "${FRONTEND_PORT:-3000}"
+
+      # JVM options (e.g. memory limits)
+      JAVA_OPTS: "${JAVA_OPTS:--Xms128m -Xmx512m}"
+    volumes:
+      # Persistent storage for the SQLite database
+      - assoincloud-data:/data
+
+volumes:
+  assoincloud-data:
+    driver: local
