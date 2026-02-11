@@ -1,8 +1,8 @@
+version: "3.8"
+
 services:
   assoincloud:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/lucadom/assoincloud:latest-dev
     container_name: assoincloud
     restart: unless-stopped
     ports:
