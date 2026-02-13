@@ -33,8 +33,6 @@ services:
       - ./data:/data
       # Maven cache — avoid re-downloading dependencies on restart
       - maven-repo:/root/.m2
-    ports:
-      - "8080:8080"
 
   # ---------- Next.js frontend (dev mode) ----------
   frontend:
@@ -56,8 +54,6 @@ services:
       - ./apps/frontend/postcss.config.cjs:/app/postcss.config.cjs:cached
       # Exclude node_modules from mount (use container's own)
       - frontend-node-modules:/app/node_modules
-    ports:
-      - "3000:3000"
 
   # ---------- Nginx reverse proxy ----------
   nginx:

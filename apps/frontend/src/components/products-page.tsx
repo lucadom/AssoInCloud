@@ -8,6 +8,7 @@ import {
 } from "mantine-react-table";
 import { MRT_Localization_IT } from "mantine-react-table/locales/it/index.esm.mjs";
 import {
+  Box,
   Text,
   Stack,
   Title,
@@ -37,6 +38,17 @@ function formatQuantity(value: number | null): string {
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
   return d.toLocaleDateString("it-IT");
+}
+
+const MONTH_NAMES = [
+  "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+  "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
+];
+
+/** Derives "Mese Anno" (e.g. "Giugno 2024") from an ISO date string. */
+export function formatMonth(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 export function ProductsPage() {
@@ -76,10 +88,15 @@ export function ProductsPage() {
         size: 200,
       },
       {
-        accessorKey: "invoiceDate",
+        id: "invoiceDate",
         header: "Data fattura",
-        size: 130,
-        Cell: ({ cell }) => formatDate(cell.getValue<string>()),
+        size: 160,
+        accessorFn: (row) => formatMonth(row.invoiceDate),
+        enableGrouping: true,
+        Cell: ({ row }) => formatDate(row.original.invoiceDate),
+        GroupedCell: ({ cell }) => (
+          <Text fw={700} size="sm">{cell.getValue<string>()}</Text>
+        ),
       },
       {
         accessorKey: "description",
@@ -89,9 +106,17 @@ export function ProductsPage() {
       {
         accessorKey: "quantity",
         header: "Quantità",
-        size: 100,
+        size: 120,
         mantineTableHeadCellProps: { align: "right" },
         mantineTableBodyCellProps: { align: "right" },
+        aggregationFn: "sum",
+        AggregatedCell: ({ cell }) => (
+          <Box style={{ textAlign: "right", width: "100%" }}>
+            <Text fw={700} size="sm" c="blue.7">
+              Tot: {formatQuantity(cell.getValue<number | null>())}
+            </Text>
+          </Box>
+        ),
         Cell: ({ cell }) => formatQuantity(cell.getValue<number | null>()),
       },
       {
@@ -106,6 +131,15 @@ export function ProductsPage() {
         size: 130,
         mantineTableHeadCellProps: { align: "right" },
         mantineTableBodyCellProps: { align: "right" },
+        enableGrouping: false,
+        aggregationFn: "mean",
+        AggregatedCell: ({ cell }) => (
+          <Box style={{ textAlign: "right", width: "100%" }}>
+            <Text fw={700} size="sm" c="blue.7">
+              Media: {formatCurrency(cell.getValue<number | null>())}
+            </Text>
+          </Box>
+        ),
         Cell: ({ cell }) => formatCurrency(cell.getValue<number | null>()),
       },
       {
@@ -114,6 +148,14 @@ export function ProductsPage() {
         size: 130,
         mantineTableHeadCellProps: { align: "right" },
         mantineTableBodyCellProps: { align: "right" },
+        aggregationFn: "sum",
+        AggregatedCell: ({ cell }) => (
+          <Box style={{ textAlign: "right", width: "100%" }}>
+            <Text fw={700} size="sm" c="blue.7">
+              Tot: {formatCurrency(cell.getValue<number | null>())}
+            </Text>
+          </Box>
+        ),
         Cell: ({ cell }) => (
           <Text fw={600} size="sm">
             {formatCurrency(cell.getValue<number | null>())}
@@ -132,10 +174,13 @@ export function ProductsPage() {
     enableFacetedValues: true,
     enableSorting: true,
     enableGlobalFilter: false,
+    enableGrouping: true,
+    enableExpandAll: true,
     getRowId: (row) => row.lineItemId,
     localization: MRT_Localization_IT,
     initialState: {
       density: "xs",
+      pagination: { pageIndex: 0, pageSize: 50 },
     },
     state: {
       isLoading: loading,
@@ -164,6 +209,10 @@ export function ProductsPage() {
       highlightOnHover: true,
       withTableBorder: true,
       withColumnBorders: true,
+    },
+    mantineToolbarAlertBannerProps: {
+      color: "blue",
+      variant: "light",
     },
   });
 

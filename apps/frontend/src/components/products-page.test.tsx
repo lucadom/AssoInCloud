@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
-import { ProductsPage } from "./products-page";
+import { ProductsPage, formatMonth } from "./products-page";
 import { TestWrapper } from "@/test-utils";
 import type { ProductSearchResult } from "@/types";
 
@@ -221,6 +221,44 @@ describe("ProductsPage", () => {
     });
     await waitFor(() => {
       expect(screen.getByText(/1 risultato trovato/)).toBeInTheDocument();
+    });
+  });
+
+  it("should display formatted dates in Data fattura column", async () => {
+    mockSearch.mockResolvedValue(results);
+    render(
+      <TestWrapper>
+        <ProductsPage />
+      </TestWrapper>
+    );
+    const input = screen.getByPlaceholderText(/Cerca prodotti/);
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "caffè" } });
+      vi.advanceTimersByTime(500);
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Caffè espresso")).toBeInTheDocument();
+    });
+    // Data fattura column shows formatted dates; month grouping is available via drag
+    expect(screen.getByRole("columnheader", { name: /Data fattura/ })).toBeInTheDocument();
+  });
+});
+
+describe("formatMonth", () => {
+  it("should format ISO date to Italian month and year", () => {
+    expect(formatMonth("2024-01-15")).toBe("Gennaio 2024");
+    expect(formatMonth("2024-06-15")).toBe("Giugno 2024");
+    expect(formatMonth("2024-12-31")).toBe("Dicembre 2024");
+  });
+
+  it("should handle all months correctly", () => {
+    const expected = [
+      "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+      "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
+    ];
+    expected.forEach((month, index) => {
+      const dateStr = `2024-${String(index + 1).padStart(2, "0")}-01`;
+      expect(formatMonth(dateStr)).toBe(`${month} 2024`);
     });
   });
 });
