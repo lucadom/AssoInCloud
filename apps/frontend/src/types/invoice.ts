@@ -98,3 +98,12 @@ export interface ProductSearchResult {
   unitPrice: number | null;
   totalPrice: number | null;
 }
+
+/** Price list entry: one row per (description, unitPrice) combination */
+export interface PriceListItem {
+  description: string;
+  unitOfMeasure: string | null;
+  unitPrice: number | null;
+  lastPurchaseDate: string;
+  totalQuantity: number | null;
+}
