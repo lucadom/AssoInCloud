@@ -50,6 +50,8 @@ describe("AppLayout", () => {
     expect(screen.getByText("Fatture")).toBeInTheDocument();
     expect(screen.getByText("Fornitori")).toBeInTheDocument();
     expect(screen.getByText("Prodotti")).toBeInTheDocument();
+    expect(screen.getByText("Soci")).toBeInTheDocument();
+    expect(screen.getByText("Elenco")).toBeInTheDocument();
     expect(screen.getByText("Compleanni")).toBeInTheDocument();
   });
 

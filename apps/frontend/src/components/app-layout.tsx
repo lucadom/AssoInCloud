@@ -37,8 +37,6 @@ const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] =
   { label: "Fornitori", value: "suppliers", icon: IconUsers },
   { label: "Prodotti", value: "products", icon: IconPackages },
   { label: "Listini", value: "price-lists", icon: IconListDetails },
-  { label: "Soci", value: "members", icon: IconUserCheck },
-  { label: "Compleanni", value: "birthdays", icon: IconCake },
 ];
 
 export function AppLayout() {
@@ -91,6 +89,36 @@ export function AppLayout() {
               }
             />
           ))}
+          <NavLink
+            label="Soci"
+            active={activePage === "members" || activePage === "birthdays"}
+            leftSection={
+              <ThemeIcon variant="light" size="sm">
+                <IconUserCheck size={14} />
+              </ThemeIcon>
+            }
+          >
+            <NavLink
+              label="Elenco"
+              active={activePage === "members"}
+              onClick={() => handleNavClick("members")}
+              leftSection={
+                <ThemeIcon variant="light" size="sm">
+                  <IconUsers size={14} />
+                </ThemeIcon>
+              }
+            />
+            <NavLink
+              label="Compleanni"
+              active={activePage === "birthdays"}
+              onClick={() => handleNavClick("birthdays")}
+              leftSection={
+                <ThemeIcon variant="light" size="sm">
+                  <IconCake size={14} />
+                </ThemeIcon>
+              }
+            />
+          </NavLink>
         </AppShell.Section>
       </AppShell.Navbar>
 
