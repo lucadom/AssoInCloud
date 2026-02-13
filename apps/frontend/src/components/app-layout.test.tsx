@@ -13,6 +13,12 @@ vi.mock("./suppliers-page", () => ({
 vi.mock("./products-page", () => ({
   ProductsPage: () => <div data-testid="products-page">ProductsPage</div>,
 }));
+vi.mock("./members-page", () => ({
+  MembersPage: () => <div data-testid="members-page">MembersPage</div>,
+}));
+vi.mock("./birthdays-page", () => ({
+  BirthdaysPage: () => <div data-testid="birthdays-page">BirthdaysPage</div>,
+}));
 
 // Mock auth
 vi.mock("@/lib/api/auth", () => ({
@@ -44,6 +50,7 @@ describe("AppLayout", () => {
     expect(screen.getByText("Fatture")).toBeInTheDocument();
     expect(screen.getByText("Fornitori")).toBeInTheDocument();
     expect(screen.getByText("Prodotti")).toBeInTheDocument();
+    expect(screen.getByText("Compleanni")).toBeInTheDocument();
   });
 
   it("should render app title in header", () => {
@@ -83,6 +90,17 @@ describe("AppLayout", () => {
     );
     fireEvent.click(screen.getByText("Prodotti"));
     expect(screen.getByTestId("products-page")).toBeInTheDocument();
+    expect(screen.queryByTestId("invoices-page")).not.toBeInTheDocument();
+  });
+
+  it("should switch to BirthdaysPage when clicking Compleanni", () => {
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByText("Compleanni"));
+    expect(screen.getByTestId("birthdays-page")).toBeInTheDocument();
     expect(screen.queryByTestId("invoices-page")).not.toBeInTheDocument();
   });
 

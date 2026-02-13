@@ -18,6 +18,7 @@ import {
   IconUsers,
   IconPackages,
   IconListDetails,
+  IconCake,
   IconUserCheck,
   IconLogout,
 } from "@tabler/icons-react";
@@ -25,10 +26,11 @@ import { InvoicesPage } from "./invoices-page";
 import { SuppliersPage } from "./suppliers-page";
 import { ProductsPage } from "./products-page";
 import { PriceListPage } from "./price-list-page";
+import { BirthdaysPage } from "./birthdays-page";
 import { MembersPage } from "./members-page";
 import { logout } from "@/lib/api/auth";
 
-type Page = "invoices" | "suppliers" | "products" | "price-lists" | "members";
+type Page = "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays";
 
 const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] = [
   { label: "Fatture", value: "invoices", icon: IconFileInvoice },
@@ -36,6 +38,7 @@ const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] =
   { label: "Prodotti", value: "products", icon: IconPackages },
   { label: "Listini", value: "price-lists", icon: IconListDetails },
   { label: "Soci", value: "members", icon: IconUserCheck },
+  { label: "Compleanni", value: "birthdays", icon: IconCake },
 ];
 
 export function AppLayout() {
@@ -97,6 +100,7 @@ export function AppLayout() {
         {activePage === "products" && <ProductsPage />}
         {activePage === "price-lists" && <PriceListPage />}
         {activePage === "members" && <MembersPage />}
+        {activePage === "birthdays" && <BirthdaysPage />}
       </AppShell.Main>
     </AppShell>
   );
