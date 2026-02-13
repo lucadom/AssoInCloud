@@ -2,7 +2,9 @@
 
 import { useRef } from "react";
 import {
+  ActionIcon,
   Modal,
+  Popover,
   Text,
   Button,
   Group,
@@ -10,7 +12,12 @@ import {
   rem,
 } from "@mantine/core";
 import { Dropzone, MIME_TYPES } from "@mantine/dropzone";
-import { IconUpload, IconFileSpreadsheet, IconX } from "@tabler/icons-react";
+import {
+  IconHelpCircle,
+  IconUpload,
+  IconFileSpreadsheet,
+  IconX,
+} from "@tabler/icons-react";
 
 interface CsvUploadModalProps {
   opened: boolean;
@@ -40,6 +47,33 @@ export function CsvUploadModal({
           Carica un file CSV contenente l&apos;elenco dei soci. Se un socio esiste già
           (identificato dal codice fiscale), i dati verranno aggiornati con i valori
           presenti nel CSV.
+          <Popover position="bottom-end" withArrow shadow="md">
+            <Popover.Target>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                aria-label="Formato CSV"
+                style={{ marginLeft: rem(6), verticalAlign: "middle" }}
+              >
+                <IconHelpCircle size={16} stroke={1.5} />
+              </ActionIcon>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Stack gap={4}>
+                <Text size="sm" fw={600}>
+                  Formato richiesto
+                </Text>
+                <Text
+                  size="sm"
+                  c="dimmed"
+                  style={{ whiteSpace: "pre", fontFamily: "var(--mantine-font-family-monospace)" }}
+                >
+                  Cognome;Nome;Codice fiscale;Data di nascita;Nato a;Residenza;Citta;Telefono;Data accettazione
+                </Text>
+              </Stack>
+            </Popover.Dropdown>
+          </Popover>
         </Text>
 
         <Dropzone

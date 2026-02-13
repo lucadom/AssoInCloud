@@ -70,4 +70,19 @@ describe("CsvUploadModal", () => {
     const button = screen.getByText("Seleziona file").closest("button");
     expect(button).toHaveAttribute("data-loading");
   });
+
+  it("should show the expected CSV format in the popover", () => {
+    render(
+      <TestWrapper>
+        <CsvUploadModal opened={true} onClose={onClose} onUpload={onUpload} />
+      </TestWrapper>
+    );
+
+    fireEvent.click(screen.getByLabelText("Formato CSV fatture"));
+    expect(
+      screen.getByText(
+        "Tipo documento;Numero fattura;Data;Partita IVA;Fornitore;Imponibile;Imposta;Numero SDI;Fattura visualizzata"
+      )
+    ).toBeInTheDocument();
+  });
 });

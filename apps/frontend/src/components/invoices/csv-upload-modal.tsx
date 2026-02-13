@@ -2,7 +2,9 @@
 
 import { useRef } from "react";
 import {
+  ActionIcon,
   Modal,
+  Popover,
   Text,
   Button,
   Group,
@@ -11,7 +13,12 @@ import {
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { Dropzone, MIME_TYPES } from "@mantine/dropzone";
-import { IconUpload, IconFileSpreadsheet, IconX } from "@tabler/icons-react";
+import {
+  IconHelpCircle,
+  IconUpload,
+  IconFileSpreadsheet,
+  IconX,
+} from "@tabler/icons-react";
 
 interface CsvUploadModalProps {
   opened: boolean;
@@ -42,6 +49,36 @@ export function CsvUploadModal({
         <Text size="sm" c="dimmed">
           Carica uno o più file CSV contenente i dati delle fatture. I file verranno
           elaborati e le fatture verranno importate automaticamente.
+          <Popover width={420} position="bottom-end" withArrow shadow="md">
+            <Popover.Target>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                aria-label="Formato CSV fatture"
+                style={{ marginLeft: rem(6), verticalAlign: "middle" }}
+              >
+                <IconHelpCircle size={16} stroke={1.5} />
+              </ActionIcon>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Stack gap={4}>
+                <Text size="sm" fw={600}>
+                  Formato richiesto
+                </Text>
+                <Text size="sm">
+                  Il formato richiesto è quello previsto dalla funzionalità di export fatture presente sul sito internet dell&apos;Agenzia delle Entrate. Il file CSV deve contenere le seguenti colonne in ordine:
+                </Text>
+                <Text
+                  size="sm"
+                  c="dimmed"
+                  style={{ fontFamily: "var(--mantine-font-family-monospace)" }}
+                >
+                  Tipo documento;Numero fattura;Data;Partita IVA;Fornitore;Imponibile;Imposta;Numero SDI;Fattura visualizzata
+                </Text>
+              </Stack>
+            </Popover.Dropdown>
+          </Popover>
         </Text>
 
         <Dropzone
