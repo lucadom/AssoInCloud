@@ -18,21 +18,24 @@ import {
   IconUsers,
   IconPackages,
   IconListDetails,
+  IconUserCheck,
   IconLogout,
 } from "@tabler/icons-react";
 import { InvoicesPage } from "./invoices-page";
 import { SuppliersPage } from "./suppliers-page";
 import { ProductsPage } from "./products-page";
 import { PriceListPage } from "./price-list-page";
+import { MembersPage } from "./members-page";
 import { logout } from "@/lib/api/auth";
 
-type Page = "invoices" | "suppliers" | "products" | "price-lists";
+type Page = "invoices" | "suppliers" | "products" | "price-lists" | "members";
 
 const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] = [
   { label: "Fatture", value: "invoices", icon: IconFileInvoice },
   { label: "Fornitori", value: "suppliers", icon: IconUsers },
   { label: "Prodotti", value: "products", icon: IconPackages },
   { label: "Listini", value: "price-lists", icon: IconListDetails },
+  { label: "Soci", value: "members", icon: IconUserCheck },
 ];
 
 export function AppLayout() {
@@ -93,6 +96,7 @@ export function AppLayout() {
         {activePage === "suppliers" && <SuppliersPage />}
         {activePage === "products" && <ProductsPage />}
         {activePage === "price-lists" && <PriceListPage />}
+        {activePage === "members" && <MembersPage />}
       </AppShell.Main>
     </AppShell>
   );
