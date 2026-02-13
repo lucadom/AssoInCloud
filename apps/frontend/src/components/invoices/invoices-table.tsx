@@ -238,10 +238,16 @@ export function InvoicesTable({
     localization: MRT_Localization_IT,
     initialState: {
       showGlobalFilter: true,
-      showColumnFilters: true,
+      showColumnFilters: false,
       sorting: [{ id: "date", desc: true }],
       density: "xs",
       pagination: { pageIndex: 0, pageSize: 50 },
+      columnVisibility: {
+        documentType: false,
+        invoiceNumber: false,
+        taxableAmount: false,
+        taxAmount: false,
+      },
       columnPinning: {
         right: ["mrt-row-actions"],
       },

@@ -1,0 +1,79 @@
+# =============================================================================
+# AssoInCloud — Docker Compose for LOCAL DEVELOPMENT
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# Features:
+#   - Backend: Spring Boot with devtools hot-reload (source mounted)
+#   - Frontend: Next.js dev server with HMR (source mounted)
+#   - Nginx reverse proxy on port 80 (same as production)
+#   - SQLite DB at ./data/assoincloud.db (shared with host)
+#   - No image rebuild needed on code changes
+# =============================================================================
+
+services:
+
+  # ---------- Spring Boot backend (dev mode) ----------
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev.backend
+    container_name: assoincloud-backend-dev
+    restart: unless-stopped
+    environment:
+      ASSOINCLOUD_DB_PATH: /data/assoincloud.db
+      ASSOINCLOUD_PASSWORD: "${ASSOINCLOUD_PASSWORD:-}"
+      JAVA_OPTS: "${JAVA_OPTS:--Xms128m -Xmx512m}"
+    volumes:
+      # Mount the backend source for hot-reload via devtools
+      - ./apps/backend/src:/app/src:cached
+      - ./apps/backend/pom.xml:/app/pom.xml:cached
+      # Persistent DB on host
+      - ./data:/data
+      # Maven cache — avoid re-downloading dependencies on restart
+      - maven-repo:/root/.m2
+    ports:
+      - "8080:8080"
+
+  # ---------- Next.js frontend (dev mode) ----------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev.frontend
+    container_name: assoincloud-frontend-dev
+    restart: unless-stopped
+    environment:
+      # Point API calls to the backend service via nginx
+      NEXT_PUBLIC_API_URL: /api
+    volumes:
+      # Mount the frontend source for HMR
+      - ./apps/frontend/src:/app/src:cached
+      - ./apps/frontend/public:/app/public:cached
+      - ./apps/frontend/theme.ts:/app/theme.ts:cached
+      - ./apps/frontend/next.config.ts:/app/next.config.ts:cached
+      - ./apps/frontend/tsconfig.json:/app/tsconfig.json:cached
+      - ./apps/frontend/postcss.config.cjs:/app/postcss.config.cjs:cached
+      # Exclude node_modules from mount (use container's own)
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "3000:3000"
+
+  # ---------- Nginx reverse proxy ----------
+  nginx:
+    image: nginx:alpine
+    container_name: assoincloud-nginx-dev
+    restart: unless-stopped
+    ports:
+      - "${ASSOINCLOUD_PORT:-80}:80"
+    volumes:
+      - ./docker/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  maven-repo:
+    driver: local
+  frontend-node-modules:
+    driver: local
