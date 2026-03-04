@@ -41,6 +41,17 @@ import {
 
 // (WidthProvider removed — we measure width manually via ResizeObserver)
 
+const MOBILE_BREAKPOINT = 768;
+
+const CARD_ORDER = [
+  "fatture-mese",
+  "fatture-prev",
+  "fornitori",
+  "soci",
+  "compleanno",
+  "grafico",
+] as const;
+
 const LAYOUT_STORAGE_KEY = "assoincloud-dashboard-layout-v1";
 
 interface DashboardLayout {
@@ -194,6 +205,16 @@ export function DashboardPage() {
   const [containerWidth, setContainerWidth] = useState(800);
   const containerRef = useRef<HTMLDivElement>(null);
   const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile breakpoint
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   // Measure container width so GridLayout knows how wide to render
   const onResize = useCallback((entries: ResizeObserverEntry[]) => {
@@ -283,188 +304,162 @@ export function DashboardPage() {
   // Only pass layout entries for visible cards to GridLayout
   const visibleLayout = layout.filter((item) => isVisible(item.i));
 
+  // Card contents — defined once, used in both mobile (Stack) and desktop (GridLayout)
+  const cardNodes: Record<string, React.ReactNode> = {
+    "fatture-mese": (
+      <StatCard icon={IconFileInvoice} color="blue" label={`Fatture — ${thisMonthName}`} loading={loading}>
+        <Text fw={700} size="xl">
+          <NumberFormatter
+            value={sumTotal(thisMonthInvoices)}
+            thousandSeparator="."
+            decimalSeparator=","
+            decimalScale={2}
+            fixedDecimalScale
+            suffix=" €"
+          />
+        </Text>
+        <Text size="sm" c="dimmed">
+          {thisMonthInvoices.length} {thisMonthInvoices.length === 1 ? "fattura" : "fatture"}
+        </Text>
+      </StatCard>
+    ),
+    "fatture-prev": (
+      <StatCard icon={IconFileInvoice} color="indigo" label="Fatture — 3 mesi precedenti" loading={loading}>
+        <Text fw={700} size="xl">
+          <NumberFormatter
+            value={sumTotal(allPrevInvoices)}
+            thousandSeparator="."
+            decimalSeparator=","
+            decimalScale={2}
+            fixedDecimalScale
+            suffix=" €"
+          />
+        </Text>
+        <Text size="sm" c="dimmed" mb="xs">
+          {allPrevInvoices.length} {allPrevInvoices.length === 1 ? "fattura" : "fatture"}
+        </Text>
+        <Divider mb="xs" />
+        <Stack gap={4}>
+          {monthSlots.map((slot) => (
+            <Group key={slot.label} justify="space-between">
+              <Text size="xs" c="dimmed" style={{ textTransform: "capitalize" }}>{slot.label}</Text>
+              <Group gap="xs">
+                <Text size="xs" c="dimmed">{slot.invoices.length} fatt.</Text>
+                <Text size="xs" fw={500}>
+                  <NumberFormatter
+                    value={sumTotal(slot.invoices)}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={2}
+                    fixedDecimalScale
+                    suffix=" €"
+                  />
+                </Text>
+              </Group>
+            </Group>
+          ))}
+        </Stack>
+      </StatCard>
+    ),
+    "fornitori": (
+      <StatCard icon={IconBuildingStore} color="teal" label="Fornitori" loading={loading}>
+        <Text fw={700} size="xl">{suppliers.length}</Text>
+        <Text size="sm" c="dimmed">totali registrati</Text>
+      </StatCard>
+    ),
+    "soci": (
+      <StatCard icon={IconUsers} color="green" label="Soci" loading={loading}>
+        <Text fw={700} size="xl">{members.length}</Text>
+        <Text size="sm" c="dimmed">totali registrati</Text>
+      </StatCard>
+    ),
+    "compleanno": (
+      <StatCard icon={IconCake} color="pink" label="Prossimo compleanno" loading={loading}>
+        {nextBirthday ? (
+          <>
+            <Text fw={700} size="xl">
+              {nextBirthday.member.firstName} {nextBirthday.member.lastName} ({nextBirthday.turningAge} anni)
+            </Text>
+            <Text size="sm" c="dimmed">
+              {nextBirthday.nextDate.toLocaleDateString("it-IT", { weekday: "long" })} {formatDate(nextBirthday.member.birthDate!)}
+              {nextBirthday.days === 0
+                ? " — oggi! 🎂"
+                : nextBirthday.days === 1
+                ? " — domani"
+                : ` — tra ${nextBirthday.days} giorni`}
+            </Text>
+          </>
+        ) : (
+          <Text size="sm" c="dimmed">Nessuna data di nascita registrata</Text>
+        )}
+      </StatCard>
+    ),
+    "grafico": (
+      <Card withBorder shadow="sm" radius="md" padding="lg" style={{ height: "100%", boxSizing: "border-box" }}>
+        <Group justify="space-between" align="flex-start" mb="md" className="drag-handle" style={{ cursor: isMobile ? "default" : "grab" }}>
+          <Text size="sm" c="dimmed" fw={500}>Andamento fatture — ultimi 12 mesi</Text>
+          <ThemeIcon variant="light" color="blue" radius="md" size="lg">
+            <IconFileInvoice size={20} />
+          </ThemeIcon>
+        </Group>
+        {loading ? (
+          <Skeleton height={220} />
+        ) : (
+          <BarChart
+            h={220}
+            data={chartData}
+            dataKey="mese"
+            series={[{ name: "Totale", color: "blue" }]}
+            withTooltip
+            tooltipProps={{
+              formatter: (value: number) =>
+                new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(value),
+            }}
+            yAxisProps={{
+              tickFormatter: (v: number) =>
+                new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 0 }).format(v),
+            }}
+          />
+        )}
+      </Card>
+    ),
+  };
+
+  const visibleCards = CARD_ORDER.filter((key) => isVisible(key));
+
   return (
     <Stack gap="md">
-      <Title order={2}>Dashboard</Title>
+      <Title order={2}>Cruscotto</Title>
 
-      <div ref={containerRef} style={{ width: "100%" }}>
-      <GridLayout
-        layout={visibleLayout}
-        width={containerWidth}
-        cols={12}
-        rowHeight={30}
-        margin={[8, 8]}
-        containerPadding={[0, 0]}
-        draggableHandle=".drag-handle"
-        onLayoutChange={handleLayoutChange}
-        onDragStop={handleInteractionStop}
-        onResizeStop={handleInteractionStop}
-        style={{ minHeight: 200 }}
-      >
-        {/* Fatture mese corrente */}
-        {isVisible("fatture-mese") && (
-        <div key="fatture-mese">
-          <StatCard icon={IconFileInvoice} color="blue" label={`Fatture — ${thisMonthName}`} loading={loading}>
-            <Text fw={700} size="xl">
-              <NumberFormatter
-                value={sumTotal(thisMonthInvoices)}
-                thousandSeparator="."
-                decimalSeparator=","
-                decimalScale={2}
-                fixedDecimalScale
-                suffix=" €"
-              />
-            </Text>
-            <Text size="sm" c="dimmed">
-              {thisMonthInvoices.length} {thisMonthInvoices.length === 1 ? "fattura" : "fatture"}
-            </Text>
-          </StatCard>
-        </div>
-        )}
-
-        {/* Fatture 3 mesi precedenti */}
-        {isVisible("fatture-prev") && (
-        <div key="fatture-prev">
-          <StatCard icon={IconFileInvoice} color="indigo" label="Fatture — 3 mesi precedenti" loading={loading}>
-            <Text fw={700} size="xl">
-              <NumberFormatter
-                value={sumTotal(allPrevInvoices)}
-                thousandSeparator="."
-                decimalSeparator=","
-                decimalScale={2}
-                fixedDecimalScale
-                suffix=" €"
-              />
-            </Text>
-            <Text size="sm" c="dimmed" mb="xs">
-              {allPrevInvoices.length} {allPrevInvoices.length === 1 ? "fattura" : "fatture"}
-            </Text>
-            <Divider mb="xs" />
-            <Stack gap={4}>
-              {monthSlots.map((slot) => (
-                <Group key={slot.label} justify="space-between">
-                  <Text size="xs" c="dimmed" style={{ textTransform: "capitalize" }}>{slot.label}</Text>
-                  <Group gap="xs">
-                    <Text size="xs" c="dimmed">{slot.invoices.length} fatt.</Text>
-                    <Text size="xs" fw={500}>
-                      <NumberFormatter
-                        value={sumTotal(slot.invoices)}
-                        thousandSeparator="."
-                        decimalSeparator=","
-                        decimalScale={2}
-                        fixedDecimalScale
-                        suffix=" €"
-                      />
-                    </Text>
-                  </Group>
-                </Group>
-              ))}
-            </Stack>
-          </StatCard>
-        </div>
-        )}
-
-        {/* Fornitori */}
-        {isVisible("fornitori") && (
-        <div key="fornitori">
-          <StatCard icon={IconBuildingStore} color="teal" label="Fornitori" loading={loading}>
-            <Text fw={700} size="xl">
-              {suppliers.length}
-            </Text>
-            <Text size="sm" c="dimmed">
-              totali registrati
-            </Text>
-          </StatCard>
-        </div>
-        )}
-
-        {/* Soci */}
-        {isVisible("soci") && (
-        <div key="soci">
-          <StatCard icon={IconUsers} color="green" label="Soci" loading={loading}>
-            <Text fw={700} size="xl">
-              {members.length}
-            </Text>
-            <Text size="sm" c="dimmed">
-              totali registrati
-            </Text>
-          </StatCard>
-        </div>
-        )}
-
-        {/* Prossimo compleanno */}
-        {isVisible("compleanno") && (
-        <div key="compleanno">
-          <StatCard icon={IconCake} color="pink" label="Prossimo compleanno" loading={loading}>
-            {nextBirthday ? (
-              <>
-                <Text fw={700} size="xl">
-                  {nextBirthday.member.firstName} {nextBirthday.member.lastName} ({nextBirthday.turningAge} anni)
-                </Text>
-                <Text size="sm" c="dimmed">
-                  {nextBirthday.nextDate.toLocaleDateString("it-IT", { weekday: "long" })} {formatDate(nextBirthday.member.birthDate!)}
-                  {nextBirthday.days === 0
-                    ? " — oggi! 🎂"
-                    : nextBirthday.days === 1
-                    ? " — domani"
-                    : ` — tra ${nextBirthday.days} giorni`}
-                </Text>
-              </>
-            ) : (
-              <Text size="sm" c="dimmed">
-                Nessuna data di nascita registrata
-              </Text>
-            )}
-          </StatCard>
-        </div>
-        )}
-
-        {/* Grafico — totali 12 mesi precedenti */}
-        {isVisible("grafico") && (
-        <div key="grafico">
-          <Card
-            withBorder
-            shadow="sm"
-            radius="md"
-            padding="lg"
-            style={{ height: "100%", boxSizing: "border-box" }}
+      {isMobile ? (
+        // --- Mobile: plain vertical stack, no drag/resize ---
+        <Stack gap="md">
+          {visibleCards.map((key) => (
+            <div key={key}>{cardNodes[key]}</div>
+          ))}
+        </Stack>
+      ) : (
+        // --- Desktop: drag & resize grid ---
+        <div ref={containerRef} style={{ width: "100%" }}>
+          <GridLayout
+            layout={visibleLayout}
+            width={containerWidth}
+            cols={12}
+            rowHeight={30}
+            margin={[8, 8]}
+            containerPadding={[0, 0]}
+            draggableHandle=".drag-handle"
+            onLayoutChange={handleLayoutChange}
+            onDragStop={handleInteractionStop}
+            onResizeStop={handleInteractionStop}
+            style={{ minHeight: 200 }}
           >
-            <Group
-              justify="space-between"
-              align="flex-start"
-              mb="md"
-              className="drag-handle"
-              style={{ cursor: "grab" }}
-            >
-              <Text size="sm" c="dimmed" fw={500}>Andamento fatture — ultimi 12 mesi</Text>
-              <ThemeIcon variant="light" color="blue" radius="md" size="lg">
-                <IconFileInvoice size={20} />
-              </ThemeIcon>
-            </Group>
-            {loading ? (
-              <Skeleton height={220} />
-            ) : (
-              <BarChart
-                h={220}
-                data={chartData}
-                dataKey="mese"
-                series={[{ name: "Totale", color: "blue" }]}
-                withTooltip
-                tooltipProps={{
-                  formatter: (value: number) =>
-                    new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(value),
-                }}
-                yAxisProps={{
-                  tickFormatter: (v: number) =>
-                    new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 0 }).format(v),
-                }}
-              />
-            )}
-          </Card>
+            {visibleCards.map((key) => (
+              <div key={key}>{cardNodes[key]}</div>
+            ))}
+          </GridLayout>
         </div>
-        )}
-      </GridLayout>
-      </div>
+      )}
     </Stack>
   );
 }
