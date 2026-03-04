@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AppShell,
+  Badge,
   Burger,
   NavLink,
   Title,
@@ -21,6 +22,7 @@ import {
   IconCake,
   IconUserCheck,
   IconLogout,
+  IconSettings,
 } from "@tabler/icons-react";
 import { InvoicesPage } from "./invoices-page";
 import { SuppliersPage } from "./suppliers-page";
@@ -29,8 +31,10 @@ import { PriceListPage } from "./price-list-page";
 import { BirthdaysPage } from "./birthdays-page";
 import { MembersPage } from "./members-page";
 import { logout } from "@/lib/api/auth";
+import { fetchCurrentVersion } from "@/lib/api/backup";
+import { SettingsPage } from "./settings-page";
 
-type Page = "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays";
+type Page = "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings";
 
 const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] = [
   { label: "Fatture", value: "invoices", icon: IconFileInvoice },
@@ -43,6 +47,13 @@ export function AppLayout() {
   const router = useRouter();
   const [activePage, setActivePage] = useState<Page>("invoices");
   const [opened, { toggle, close }] = useDisclosure();
+  const [dbVersion, setDbVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchCurrentVersion()
+      .then((data) => setDbVersion(data.version))
+      .catch(() => setDbVersion(null));
+  }, []);
 
   async function handleLogout() {
     await logout();
@@ -65,6 +76,9 @@ export function AppLayout() {
           <Group gap="sm">
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Title order={4}>AssoInCloud</Title>
+            {dbVersion !== null && (
+              <Badge variant="light" color="gray" size="sm">v{dbVersion}</Badge>
+            )}
           </Group>
           <Tooltip label="Esci">
             <ActionIcon variant="subtle" color="gray" onClick={handleLogout}>
@@ -119,6 +133,16 @@ export function AppLayout() {
               }
             />
           </NavLink>
+          <NavLink
+            label="Impostazioni"
+            active={activePage === "settings"}
+            onClick={() => handleNavClick("settings")}
+            leftSection={
+              <ThemeIcon variant="light" size="sm">
+                <IconSettings size={14} />
+              </ThemeIcon>
+            }
+          />
         </AppShell.Section>
       </AppShell.Navbar>
 
@@ -129,6 +153,7 @@ export function AppLayout() {
         {activePage === "price-lists" && <PriceListPage />}
         {activePage === "members" && <MembersPage />}
         {activePage === "birthdays" && <BirthdaysPage />}
+        {activePage === "settings" && <SettingsPage dbVersion={dbVersion} />}
       </AppShell.Main>
     </AppShell>
   );
