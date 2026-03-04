@@ -19,6 +19,9 @@ vi.mock("./members-page", () => ({
 vi.mock("./birthdays-page", () => ({
   BirthdaysPage: () => <div data-testid="birthdays-page">BirthdaysPage</div>,
 }));
+vi.mock("./dashboard-page", () => ({
+  DashboardPage: () => <div data-testid="dashboard-page">DashboardPage</div>,
+}));
 
 // Mock auth
 vi.mock("@/lib/api/auth", () => ({
@@ -47,6 +50,7 @@ describe("AppLayout", () => {
         <AppLayout />
       </TestWrapper>
     );
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Fatture")).toBeInTheDocument();
     expect(screen.getByText("Fornitori")).toBeInTheDocument();
     expect(screen.getByText("Prodotti")).toBeInTheDocument();
@@ -64,12 +68,24 @@ describe("AppLayout", () => {
     expect(screen.getByText("AssoInCloud")).toBeInTheDocument();
   });
 
-  it("should show InvoicesPage by default", () => {
+  it("should show DashboardPage by default", async () => {
     render(
       <TestWrapper>
         <AppLayout />
       </TestWrapper>
     );
+    await waitFor(() => {
+      expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+    });
+  });
+
+  it("should show InvoicesPage when clicking Fatture", () => {
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByText("Fatture"));
     expect(screen.getByTestId("invoices-page")).toBeInTheDocument();
   });
 

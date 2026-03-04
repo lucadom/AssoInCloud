@@ -1,8 +1,6 @@
 "use client";
 
-"use client";
-
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Badge,
@@ -13,6 +11,8 @@ import {
   Loader,
   Modal,
   Stack,
+  Switch,
+  Tabs,
   Text,
   Title,
 } from "@mantine/core";
@@ -20,7 +20,9 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
   IconAlertTriangle,
+  IconDatabase,
   IconDownload,
+  IconLayoutDashboard,
   IconUpload,
 } from "@tabler/icons-react";
 import {
@@ -28,6 +30,12 @@ import {
   inspectBackupFile,
   restoreBackup,
 } from "@/lib/api/backup";
+import {
+  type AppSettings,
+  type DashboardCardKey,
+  loadSettings,
+  saveSettings,
+} from "@/lib/settings";
 
 interface SettingsPageProps {
   dbVersion: string | null;
@@ -45,6 +53,28 @@ export function SettingsPage({ dbVersion: currentVersion }: SettingsPageProps) {
   const [confirmOpened, confirmHandlers] = useDisclosure(false);
 
   const fileInputRef = useRef<HTMLButtonElement>(null);
+
+  const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
+
+  // Load settings from localStorage after mount (avoids SSR mismatch)
+  useEffect(() => {
+    setAppSettings(loadSettings());
+  }, []);
+
+  function handleCardVisibilityChange(cardKey: DashboardCardKey, visible: boolean): void {
+    setAppSettings((prev) => {
+      if (!prev) return prev;
+      const next: AppSettings = {
+        ...prev,
+        dashboard: {
+          ...prev.dashboard,
+          visibleCards: { ...prev.dashboard.visibleCards, [cardKey]: visible },
+        },
+      };
+      saveSettings(next);
+      return next;
+    });
+  }
 
   async function handleFileChange(file: File | null) {
     setSelectedFile(file);
@@ -109,83 +139,126 @@ export function SettingsPage({ dbVersion: currentVersion }: SettingsPageProps) {
 
   return (
     <>
-      <Stack gap="xl" maw={600}>
+      <Stack gap="xl" maw={700}>
         <Title order={2}>Impostazioni</Title>
 
-        {/* Backup section */}
-        <Stack gap="xs">
-          <Group gap="sm" align="center">
-            <IconDownload size={20} />
-            <Title order={4}>Backup dei dati</Title>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Scarica una copia completa del database. Il file può essere usato per ripristinare i dati in caso di necessità.
-          </Text>
-          <Group>
-            <Button
-              leftSection={<IconDownload size={16} />}
-              onClick={handleDownload}
-              loading={downloadLoading}
-            >
-              Scarica backup
-            </Button>
-          </Group>
-        </Stack>
+        <Tabs defaultValue="dashboard" variant="outline">
+          <Tabs.List mb="xl">
+            <Tabs.Tab value="dashboard" leftSection={<IconLayoutDashboard size={16} />}>
+              Dashboard
+            </Tabs.Tab>
+            <Tabs.Tab value="backup" leftSection={<IconDatabase size={16} />}>
+              Backup e ripristino
+            </Tabs.Tab>
+          </Tabs.List>
 
-        <Divider />
+          {/* --- Tab: Dashboard --- */}
+          <Tabs.Panel value="dashboard">
+            <Stack gap="md" maw={500}>
+              <Text size="sm" c="dimmed">
+                Scegli quali card visualizzare nella Dashboard.
+              </Text>
+              <Stack gap="xs">
+                {([
+                  { key: "fatture-mese",  label: "Fatture mese corrente" },
+                  { key: "fatture-prev",  label: "Fatture 3 mesi precedenti" },
+                  { key: "fornitori",     label: "Fornitori" },
+                  { key: "soci",          label: "Soci" },
+                  { key: "compleanno",    label: "Prossimo compleanno" },
+                  { key: "grafico",       label: "Grafico andamento fatture" },
+                ] as { key: DashboardCardKey; label: string }[]).map(({ key, label }) => (
+                  <Switch
+                    key={key}
+                    label={label}
+                    checked={appSettings?.dashboard.visibleCards[key] ?? true}
+                    disabled={appSettings === null}
+                    onChange={(e) => handleCardVisibilityChange(key, e.currentTarget.checked)}
+                  />
+                ))}
+              </Stack>
+            </Stack>
+          </Tabs.Panel>
 
-        {/* Restore section */}
-        <Stack gap="sm">
-          <Group gap="sm" align="center">
-            <IconUpload size={20} />
-            <Title order={4}>Ripristino dei dati</Title>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Ripristina il database da un file di backup precedentemente scaricato.
-            <strong> I dati attuali verranno sovrascritti.</strong>
-          </Text>
+          {/* --- Tab: Backup e ripristino --- */}
+          <Tabs.Panel value="backup">
+            <Stack gap="xl" maw={500}>
+              {/* Backup */}
+              <Stack gap="xs">
+                <Group gap="sm" align="center">
+                  <IconDownload size={20} />
+                  <Title order={4}>Backup dei dati</Title>
+                </Group>
+                <Text size="sm" c="dimmed">
+                  Scarica una copia completa del database. Il file può essere usato per ripristinare i dati in caso di necessità.
+                </Text>
+                <Group>
+                  <Button
+                    leftSection={<IconDownload size={16} />}
+                    onClick={handleDownload}
+                    loading={downloadLoading}
+                  >
+                    Scarica backup
+                  </Button>
+                </Group>
+              </Stack>
 
-          <FileInput
-            ref={fileInputRef}
-            accept=".db"
-            placeholder="Seleziona file di backup (.db)"
-            value={selectedFile}
-            onChange={handleFileChange}
-            disabled={fileInspecting}
-            rightSection={fileInspecting ? <Loader size="xs" /> : undefined}
-            clearable
-          />
+              <Divider />
 
-          {fileError && (
-            <Text size="sm" c="red">{fileError}</Text>
-          )}
+              {/* Restore */}
+              <Stack gap="sm">
+                <Group gap="sm" align="center">
+                  <IconUpload size={20} />
+                  <Title order={4}>Ripristino dei dati</Title>
+                </Group>
+                <Text size="sm" c="dimmed">
+                  Ripristina il database da un file di backup precedentemente scaricato.
+                  <strong> I dati attuali verranno sovrascritti.</strong>
+                </Text>
 
-          {fileVersion && (
-            <Group gap="xs">
-              <Text size="sm" c="dimmed">Versione nel file:</Text>
-              <Badge variant="light" color={versionsMatch ? "green" : "orange"}>
-                v{fileVersion}
-              </Badge>
-              {versionsMatch && (
-                <Text size="sm" c="green">Compatibile con la versione corrente</Text>
-              )}
-              {versionMismatch && (
-                <Text size="sm" c="orange">Versione diversa da quella corrente</Text>
-              )}
-            </Group>
-          )}
+                <FileInput
+                  ref={fileInputRef}
+                  accept=".db"
+                  placeholder="Seleziona file di backup (.db)"
+                  value={selectedFile}
+                  onChange={handleFileChange}
+                  disabled={fileInspecting}
+                  rightSection={fileInspecting ? <Loader size="xs" /> : undefined}
+                  clearable
+                />
 
-          <Group>
-            <Button
-              leftSection={<IconUpload size={16} />}
-              color="red"
-              onClick={confirmHandlers.open}
-              disabled={!selectedFile || fileInspecting}
-            >
-              Ripristina da file
-            </Button>
-          </Group>
-        </Stack>
+                {fileError && (
+                  <Text size="sm" c="red">{fileError}</Text>
+                )}
+
+                {fileVersion && (
+                  <Group gap="xs">
+                    <Text size="sm" c="dimmed">Versione nel file:</Text>
+                    <Badge variant="light" color={versionsMatch ? "green" : "orange"}>
+                      v{fileVersion}
+                    </Badge>
+                    {versionsMatch && (
+                      <Text size="sm" c="green">Compatibile con la versione corrente</Text>
+                    )}
+                    {versionMismatch && (
+                      <Text size="sm" c="orange">Versione diversa da quella corrente</Text>
+                    )}
+                  </Group>
+                )}
+
+                <Group>
+                  <Button
+                    leftSection={<IconUpload size={16} />}
+                    color="red"
+                    onClick={confirmHandlers.open}
+                    disabled={!selectedFile || fileInspecting}
+                  >
+                    Ripristina da file
+                  </Button>
+                </Group>
+              </Stack>
+            </Stack>
+          </Tabs.Panel>
+        </Tabs>
       </Stack>
 
       {/* Restore confirmation modal */}

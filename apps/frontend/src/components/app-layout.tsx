@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   AppShell,
@@ -23,6 +24,7 @@ import {
   IconUserCheck,
   IconLogout,
   IconSettings,
+  IconLayoutDashboard,
 } from "@tabler/icons-react";
 import { InvoicesPage } from "./invoices-page";
 import { SuppliersPage } from "./suppliers-page";
@@ -33,10 +35,18 @@ import { MembersPage } from "./members-page";
 import { logout } from "@/lib/api/auth";
 import { fetchCurrentVersion } from "@/lib/api/backup";
 import { SettingsPage } from "./settings-page";
+const DashboardPage = dynamic(
+  async () => {
+    const mod = await import("./dashboard-page");
+    return { default: mod.DashboardPage };
+  },
+  { ssr: false }
+);
 
-type Page = "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings";
+type Page = "dashboard" | "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings";
 
 const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] = [
+  { label: "Dashboard", value: "dashboard", icon: IconLayoutDashboard },
   { label: "Fatture", value: "invoices", icon: IconFileInvoice },
   { label: "Fornitori", value: "suppliers", icon: IconUsers },
   { label: "Prodotti", value: "products", icon: IconPackages },
@@ -45,7 +55,7 @@ const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] =
 
 export function AppLayout() {
   const router = useRouter();
-  const [activePage, setActivePage] = useState<Page>("invoices");
+  const [activePage, setActivePage] = useState<Page>("dashboard");
   const [opened, { toggle, close }] = useDisclosure();
   const [dbVersion, setDbVersion] = useState<string | null>(null);
 
@@ -147,6 +157,7 @@ export function AppLayout() {
       </AppShell.Navbar>
 
       <AppShell.Main>
+        {activePage === "dashboard" && <DashboardPage />}
         {activePage === "invoices" && <InvoicesPage />}
         {activePage === "suppliers" && <SuppliersPage />}
         {activePage === "products" && <ProductsPage />}
