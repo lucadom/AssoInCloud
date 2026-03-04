@@ -46,34 +46,34 @@ function formatCurrency(amount: number, isCreditNote: boolean = false): string {
   });
 }
 
-type DatePreset = "all" | "lastMonth" | "previousMonth" | "last3Months" | "last6Months" | "thisYear" | "previousYear";
+type DatePreset = "all" | "thisMonth" | "lastMonth" | "twoMonthsAgo" | "last3Months" | "thisYear" | "previousYear";
 
 function getPresetRange(preset: DatePreset): [Date | null, Date | null] {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   switch (preset) {
-    case "lastMonth": {
-      const from = new Date(today);
-      from.setMonth(from.getMonth() - 1);
-      return [from, today];
+    case "thisMonth": {
+      const from = new Date(today.getFullYear(), today.getMonth(), 1);
+      return [from, null];
     }
-    case "previousMonth": {
+    case "lastMonth": {
       const from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const to = new Date(today.getFullYear(), today.getMonth(), 0);
       return [from, to];
     }
-    case "last3Months": {
-      const from = new Date(today);
-      from.setMonth(from.getMonth() - 3);
-      return [from, today];
+    case "twoMonthsAgo": {
+      const from = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+      const to = new Date(today.getFullYear(), today.getMonth() - 1, 0);
+      return [from, to];
     }
-    case "last6Months": {
-      const from = new Date(today);
-      from.setMonth(from.getMonth() - 6);
-      return [from, today];
+    case "last3Months": {
+      // 3 months preceding the current month: from 1st of (currentMonth-3) to last day of last month
+      const from = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+      const to = new Date(today.getFullYear(), today.getMonth(), 0);
+      return [from, to];
     }
     case "thisYear":
-      return [new Date(today.getFullYear(), 0, 1), today];
+      return [new Date(today.getFullYear(), 0, 1), null];
     case "previousYear": {
       const from = new Date(today.getFullYear() - 1, 0, 1);
       const to = new Date(today.getFullYear() - 1, 11, 31);
@@ -332,10 +332,10 @@ export function InvoicesTable({
           onChange={(value) => setDatePreset(value as DatePreset)}
           data={[
             { label: "Tutte", value: "all" },
-            { label: "Ultimo mese", value: "lastMonth" },
-            { label: "Mese precedente", value: "previousMonth" },
+            { label: "Questo mese", value: "thisMonth" },
+            { label: "Mese scorso", value: "lastMonth" },
+            { label: "Due mesi fa", value: "twoMonthsAgo" },
             { label: "Ultimi 3 mesi", value: "last3Months" },
-            { label: "Ultimi 6 mesi", value: "last6Months" },
             { label: "Anno corrente", value: "thisYear" },
             { label: "Anno precedente", value: "previousYear" },
           ]}

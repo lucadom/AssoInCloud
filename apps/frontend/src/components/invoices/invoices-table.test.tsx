@@ -90,7 +90,7 @@ describe("InvoicesTable", () => {
       </TestWrapper>
     );
     expect(screen.getByText("Tutte")).toBeInTheDocument();
-    expect(screen.getByText("Ultimo mese")).toBeInTheDocument();
+    expect(screen.getByText("Questo mese")).toBeInTheDocument();
     expect(screen.getByText("Anno corrente")).toBeInTheDocument();
   });
 
@@ -100,8 +100,8 @@ describe("InvoicesTable", () => {
         <InvoicesTable invoices={invoices} onView={onView} onEdit={onEdit} onDelete={onDelete} />
       </TestWrapper>
     );
-    // Click "Ultimo mese" — invoices from 2024 won't be in last month
-    fireEvent.click(screen.getByText("Ultimo mese"));
+    // Click "Questo mese" — invoices from 2024 won't be in this month
+    fireEvent.click(screen.getByText("Questo mese"));
     expect(screen.queryByText("Alfa SRL")).not.toBeInTheDocument();
   });
 
@@ -112,7 +112,7 @@ describe("InvoicesTable", () => {
       </TestWrapper>
     );
     fireEvent.click(screen.getByText("Ultimi 3 mesi"));
-    fireEvent.click(screen.getByText("Ultimi 6 mesi"));
+    fireEvent.click(screen.getByText("Due mesi fa"));
     fireEvent.click(screen.getByText("Anno corrente"));
     // Back to all
     fireEvent.click(screen.getByText("Tutte"));
