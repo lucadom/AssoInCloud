@@ -23,8 +23,10 @@ import {
   IconDatabase,
   IconDownload,
   IconLayoutDashboard,
+  IconRefresh,
   IconUpload,
 } from "@tabler/icons-react";
+import { resetLayouts } from "@/lib/dashboard-layout";
 import {
   downloadBackup,
   inspectBackupFile,
@@ -175,6 +177,31 @@ export function SettingsPage({ dbVersion: currentVersion }: SettingsPageProps) {
                     onChange={(e) => handleCardVisibilityChange(key, e.currentTarget.checked)}
                   />
                 ))}
+              </Stack>
+
+              <Divider />
+
+              <Stack gap="xs">
+                <Text size="sm" fw={500}>Posizione e dimensione delle card</Text>
+                <Text size="sm" c="dimmed">
+                  Ripristina la posizione e la dimensione di tutte le card ai valori predefiniti.
+                </Text>
+                <Group>
+                  <Button
+                    variant="default"
+                    leftSection={<IconRefresh size={16} />}
+                    onClick={() => {
+                      resetLayouts();
+                      notifications.show({
+                        title: "Layout ripristinato",
+                        message: "Le card sono tornate alla posizione e dimensione predefinite",
+                        color: "green",
+                      });
+                    }}
+                  >
+                    Ripristina layout predefinito
+                  </Button>
+                </Group>
               </Stack>
             </Stack>
           </Tabs.Panel>

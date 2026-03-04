@@ -3,9 +3,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const _rgl = require("react-grid-layout");
-// react-grid-layout is a CJS module: module.exports = Class (default export)
+// react-grid-layout is a CJS module. Turbopack may wrap it under `.default`.
+// Named exports (Responsive) live on the raw require result, not under `.default`.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const GridLayout = (_rgl.default ?? _rgl) as React.ComponentType<Record<string, unknown>>;
+const _rglBase: any = _rgl.default ?? _rgl;
+// `Responsive` is a named export — check the raw module first, then the base class
+const Responsive = (_rgl.Responsive ?? _rglBase.Responsive) as React.ComponentType<Record<string, unknown>>;
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { BarChart } from "@mantine/charts";
@@ -36,6 +39,14 @@ import {
   type AppSettings,
   loadSettings,
 } from "@/lib/settings";
+import {
+  type DashboardLayout,
+  type ResponsiveLayouts,
+  DEFAULT_LAYOUTS,
+  DASHBOARD_LAYOUT_RESET_EVENT,
+  loadLayouts,
+  saveLayouts,
+} from "@/lib/dashboard-layout";
 
 // --- Grid layout setup ---
 
@@ -52,54 +63,9 @@ const CARD_ORDER = [
   "grafico",
 ] as const;
 
-const LAYOUT_STORAGE_KEY = "assoincloud-dashboard-layout-v1";
-
-interface DashboardLayout {
-  i: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  minW?: number;
-  minH?: number;
-  isDraggable?: boolean;
-  isResizable?: boolean;
-  static?: boolean;
-}
-
-const DEFAULT_LAYOUT: DashboardLayout[] = [
-  { i: "fatture-mese", x: 0,  y: 0,  w: 4, h: 5, minW: 1, minH: 1 },
-  { i: "fatture-prev", x: 4,  y: 0,  w: 4, h: 8, minW: 1, minH: 1 },
-  { i: "fornitori",    x: 8,  y: 0,  w: 4, h: 5, minW: 1, minH: 1 },
-  { i: "soci",         x: 0,  y: 5,  w: 4, h: 5, minW: 1, minH: 1 },
-  { i: "compleanno",   x: 8,  y: 5,  w: 4, h: 5, minW: 1, minH: 1 },
-  { i: "grafico",      x: 0,  y: 10, w: 12, h: 11, minW: 1, minH: 1 },
-];
-
-function loadLayout(): DashboardLayout[] {
-  try {
-    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
-    if (raw) {
-      const parsed: DashboardLayout[] = JSON.parse(raw);
-      // Merge saved positions/sizes with defaults (preserves minW/minH in case defaults change)
-      return DEFAULT_LAYOUT.map((def) => {
-        const saved = parsed.find((l) => l.i === def.i);
-        return saved ? { ...def, x: saved.x, y: saved.y, w: saved.w, h: saved.h } : def;
-      });
-    }
-  } catch {
-    // ignore
-  }
-  return DEFAULT_LAYOUT;
-}
-
-function saveLayout(layout: DashboardLayout[]): void {
-  try {
-    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout));
-  } catch {
-    // ignore
-  }
-}
+// Breakpoints and column counts for the Responsive grid (desktop only, ≥ MOBILE_BREAKPOINT)
+const BREAKPOINTS = { lg: 1200, md: MOBILE_BREAKPOINT };
+const COLS = { lg: 18, md: 12 };
 
 // --- Date helpers ---
 
@@ -201,19 +167,27 @@ export function DashboardPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [layout, setLayout] = useState<DashboardLayout[]>(DEFAULT_LAYOUT);
-  const [containerWidth, setContainerWidth] = useState(800);
+  const [layouts, setLayouts] = useState<ResponsiveLayouts>(DEFAULT_LAYOUTS);
+  const [containerWidth, setContainerWidth] = useState(1280);
   const containerRef = useRef<HTMLDivElement>(null);
   const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [currentBreakpoint, setCurrentBreakpoint] = useState<string>("lg");
 
-  // Detect mobile breakpoint
+  // Detect mobile breakpoint (below 768px → plain Stack, no grid overhead)
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     setIsMobile(mq.matches);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Listen for layout reset triggered from the Settings page
+  useEffect(() => {
+    const handler = () => setLayouts({ ...DEFAULT_LAYOUTS });
+    window.addEventListener(DASHBOARD_LAYOUT_RESET_EVENT, handler);
+    return () => window.removeEventListener(DASHBOARD_LAYOUT_RESET_EVENT, handler);
   }, []);
 
   // Measure container width so GridLayout knows how wide to render
@@ -233,7 +207,7 @@ export function DashboardPage() {
 
   // Load saved layout from localStorage after mount (avoids SSR hydration mismatch)
   useEffect(() => {
-    setLayout(loadLayout());
+    setLayouts(loadLayouts());
     setAppSettings(loadSettings());
   }, []);
 
@@ -272,9 +246,9 @@ export function DashboardPage() {
   );
   const thisMonthName = now.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
 
-  // Build 12-month chart data (12 months preceding the current month)
-  const chartData = Array.from({ length: 12 }, (_, i) => {
-    const offset = 12 - i; // 12 = oldest, 1 = last month
+  // Build 18-month chart data (18 months preceding the current month)
+  const chartData = Array.from({ length: 18 }, (_, i) => {
+    const offset = 18 - i; // 18 = oldest, 1 = last month
     const m = ((thisMonth - offset) % 12 + 12) % 12;
     const y = thisYear + Math.floor((thisMonth - offset) / 12);
     const inv = filterInvoicesByRange(invoices, startOfMonth(y, m), endOfMonth(y, m));
@@ -284,16 +258,21 @@ export function DashboardPage() {
 
   const nextBirthday = getNextBirthday(members);
 
-  // Only update state on layout changes (do NOT save here — onLayoutChange fires on mount
-  // and would overwrite localStorage before the load useEffect can restore saved positions)
-  function handleLayoutChange(newLayout: DashboardLayout[]): void {
-    setLayout(newLayout);
+  // Responsive onLayoutChange fires with (currentLayout, allLayouts) — update all breakpoints
+  // Do NOT save here: this also fires on mount and would overwrite localStorage before loadLayouts restores data.
+  function handleLayoutChange(_current: DashboardLayout[], allLayouts: ResponsiveLayouts): void {
+    setLayouts(allLayouts);
   }
 
-  // Save only when the user explicitly finishes a drag or resize
+  // Save all breakpoint layouts when the user finishes dragging or resizing
   function handleInteractionStop(newLayout: DashboardLayout[]): void {
-    setLayout(newLayout);
-    saveLayout(newLayout);
+    const updated = { ...layouts, [currentBreakpoint]: newLayout };
+    setLayouts(updated);
+    saveLayouts(updated);
+  }
+
+  function handleBreakpointChange(bp: string): void {
+    setCurrentBreakpoint(bp);
   }
 
   function isVisible(cardKey: string): boolean {
@@ -301,8 +280,13 @@ export function DashboardPage() {
     return appSettings.dashboard.visibleCards[cardKey as keyof typeof appSettings.dashboard.visibleCards] ?? true;
   }
 
-  // Only pass layout entries for visible cards to GridLayout
-  const visibleLayout = layout.filter((item) => isVisible(item.i));
+  // Filter out hidden cards for each breakpoint layout passed to Responsive
+  const visibleLayouts: ResponsiveLayouts = Object.fromEntries(
+    Object.entries(layouts).map(([bp, bpLayout]) => [
+      bp,
+      bpLayout.filter((item) => isVisible(item.i)),
+    ])
+  );
 
   // Card contents — defined once, used in both mobile (Stack) and desktop (GridLayout)
   const cardNodes: Record<string, React.ReactNode> = {
@@ -397,7 +381,7 @@ export function DashboardPage() {
     "grafico": (
       <Card withBorder shadow="sm" radius="md" padding="lg" style={{ height: "100%", boxSizing: "border-box" }}>
         <Group justify="space-between" align="flex-start" mb="md" className="drag-handle" style={{ cursor: isMobile ? "default" : "grab" }}>
-          <Text size="sm" c="dimmed" fw={500}>Andamento fatture — ultimi 12 mesi</Text>
+          <Text size="sm" c="dimmed" fw={500}>Andamento fatture — ultimi 18 mesi</Text>
           <ThemeIcon variant="light" color="blue" radius="md" size="lg">
             <IconFileInvoice size={20} />
           </ThemeIcon>
@@ -439,17 +423,19 @@ export function DashboardPage() {
           ))}
         </Stack>
       ) : (
-        // --- Desktop: drag & resize grid ---
+        // --- Desktop: responsive drag & resize grid (lg ≥ 1200px: 18 cols, md 768-1199px: 12 cols) ---
         <div ref={containerRef} style={{ width: "100%" }}>
-          <GridLayout
-            layout={visibleLayout}
+          <Responsive
+            layouts={visibleLayouts}
             width={containerWidth}
-            cols={12}
-            rowHeight={30}
+            breakpoints={BREAKPOINTS}
+            cols={COLS}
+            rowHeight={15}
             margin={[8, 8]}
             containerPadding={[0, 0]}
             draggableHandle=".drag-handle"
             onLayoutChange={handleLayoutChange}
+            onBreakpointChange={handleBreakpointChange}
             onDragStop={handleInteractionStop}
             onResizeStop={handleInteractionStop}
             style={{ minHeight: 200 }}
@@ -457,7 +443,7 @@ export function DashboardPage() {
             {visibleCards.map((key) => (
               <div key={key}>{cardNodes[key]}</div>
             ))}
-          </GridLayout>
+          </Responsive>
         </div>
       )}
     </Stack>
