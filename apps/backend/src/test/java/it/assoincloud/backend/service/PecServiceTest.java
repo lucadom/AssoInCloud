@@ -2,7 +2,11 @@ package it.assoincloud.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.Test;
+
+import it.assoincloud.backend.dto.PecSettingsDto;
 
 /**
  * Unit tests for PecService configuration logic.
@@ -14,33 +18,39 @@ import org.junit.jupiter.api.Test;
  */
 class PecServiceTest {
 
+    private PecService serviceWith(String host) {
+        AppSettingService appSettingService = mock(AppSettingService.class);
+        PecSettingsDto dto = new PecSettingsDto(host, 993, "user", "", true, false, false);
+        when(appSettingService.getPecSettings()).thenReturn(dto);
+        return new PecService(appSettingService);
+    }
+
     @Test
     void isConfigured_should_returnFalse_when_hostIsEmpty() {
-        PecService service = new PecService("", 993, "user", "pass", true, false);
-        assertFalse(service.isConfigured());
+        assertFalse(serviceWith("").isConfigured());
     }
 
     @Test
     void isConfigured_should_returnFalse_when_hostIsBlank() {
-        PecService service = new PecService("   ", 993, "user", "pass", true, false);
-        assertFalse(service.isConfigured());
+        assertFalse(serviceWith("   ").isConfigured());
     }
 
     @Test
     void isConfigured_should_returnFalse_when_hostIsNull() {
-        PecService service = new PecService(null, 993, "user", "pass", true, false);
-        assertFalse(service.isConfigured());
+        assertFalse(serviceWith(null).isConfigured());
     }
 
     @Test
     void isConfigured_should_returnTrue_when_hostIsSet() {
-        PecService service = new PecService("imap.pec.example.com", 993, "user", "pass", true, false);
-        assertTrue(service.isConfigured());
+        assertTrue(serviceWith("imap.pec.example.com").isConfigured());
     }
 
     @Test
     void isConfigured_should_returnTrue_when_sslIsDisabled() {
-        PecService service = new PecService("mail.example.com", 143, "user", "pass", false, false);
+        AppSettingService appSettingService = mock(AppSettingService.class);
+        PecSettingsDto dto = new PecSettingsDto("mail.example.com", 143, "user", "", false, false, false);
+        when(appSettingService.getPecSettings()).thenReturn(dto);
+        PecService service = new PecService(appSettingService);
         assertTrue(service.isConfigured());
     }
 }

@@ -10,7 +10,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import it.assoincloud.backend.dto.PecAttachmentDto;
@@ -34,29 +33,14 @@ public class PecService {
 
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
-    private final String host;
-    private final int port;
-    private final String username;
-    private final String password;
-    private final boolean ssl;
-    private final boolean sslTrustAll;
+    private final AppSettingService appSettingService;
 
-    public PecService(
-            @Value("${assoincloud.pec.host:}") String host,
-            @Value("${assoincloud.pec.port:993}") int port,
-            @Value("${assoincloud.pec.username:}") String username,
-            @Value("${assoincloud.pec.password:}") String password,
-            @Value("${assoincloud.pec.ssl:true}") boolean ssl,
-            @Value("${assoincloud.pec.ssl-trust-all:false}") boolean sslTrustAll) {
-        this.host = host;
-        this.port = port;
-        this.username = username;
-        this.password = password;
-        this.ssl = ssl;
-        this.sslTrustAll = sslTrustAll;
+    public PecService(AppSettingService appSettingService) {
+        this.appSettingService = appSettingService;
     }
 
     public boolean isConfigured() {
+        String host = appSettingService.getPecSettings().host();
         return host != null && !host.isBlank();
     }
 
@@ -261,24 +245,26 @@ public class PecService {
     // ---- private helpers ----
 
     private Store openStore() throws MessagingException {
+        it.assoincloud.backend.dto.PecSettingsDto cfg = appSettingService.getPecSettings();
+        String password = appSettingService.getPecPassword();
+        boolean ssl = cfg.ssl();
         String protocol = ssl ? "imaps" : "imap";
         Properties props = new Properties();
         if (ssl) {
-            props.put("mail.imaps.host", host);
-            props.put("mail.imaps.port", String.valueOf(port));
-            if (sslTrustAll) {
-                // Trust any SSL certificate — needed for PEC providers that use
-                // private CA chains not included in the standard JRE trust store
-                // (e.g. Legalmail/Infocert). Enable via ASSOINCLOUD_PEC_SSL_TRUST_ALL=true.
+            props.put("mail.imaps.host", cfg.host());
+            props.put("mail.imaps.port", String.valueOf(cfg.port()));
+            if (cfg.sslTrustAll()) {
+                // Trust any SSL certificate — needed for PEC providers with private CA chains
+                // (e.g. Legalmail/Infocert). Configure via the settings page.
                 props.put("mail.imaps.ssl.trust", "*");
             }
         } else {
-            props.put("mail.imap.host", host);
-            props.put("mail.imap.port", String.valueOf(port));
+            props.put("mail.imap.host", cfg.host());
+            props.put("mail.imap.port", String.valueOf(cfg.port()));
         }
         Session session = Session.getInstance(props);
         Store store = session.getStore(protocol);
-        store.connect(host, port, username, password);
+        store.connect(cfg.host(), cfg.port(), cfg.username(), password);
         return store;
     }
 

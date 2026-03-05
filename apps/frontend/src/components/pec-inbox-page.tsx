@@ -149,13 +149,11 @@ export function PecInboxPage() {
         color="yellow"
         mt="md"
       >
-        Accesso alla casella PEC non configurato. Impostare le variabili
-        d&apos;ambiente{" "}
+        Accesso alla casella PEC non configurato. Impostare le credenziali IMAP
+        nella pagina{" "}
         <Text component="span" fw={600} size="sm">
-          ASSOINCLOUD_PEC_HOST, ASSOINCLOUD_PEC_USERNAME,
-          ASSOINCLOUD_PEC_PASSWORD
-        </Text>{" "}
-        e riavviare l&apos;applicazione.
+          Impostazioni &rarr; PEC
+        </Text>.
       </Alert>
     );
   }

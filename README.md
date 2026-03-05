@@ -96,15 +96,13 @@ nella stessa directory, oppure inline al lancio.
 | `JAVA_OPTS` | Opzioni JVM (memoria, GC, ecc.) | `-Xms128m -Xmx512m` |
 | `SERVER_PORT` | Porta interna del backend Spring Boot | `8080` |
 | `FRONTEND_PORT` | Porta interna del frontend Next.js | `3000` |
-| `ASSOINCLOUD_PEC_HOST` | Host del server IMAP PEC. Vuoto = pagina PEC disabilitata | _(vuoto)_ |
-| `ASSOINCLOUD_PEC_PORT` | Porta del server IMAP PEC | `993` |
-| `ASSOINCLOUD_PEC_USERNAME` | Username (indirizzo PEC) per il login IMAP | _(vuoto)_ |
-| `ASSOINCLOUD_PEC_PASSWORD` | Password della casella PEC | _(vuoto)_ |
-| `ASSOINCLOUD_PEC_SSL` | `true` = connessione IMAPS (SSL), `false` = IMAP plain | `true` |
-| `ASSOINCLOUD_PEC_SSL_TRUST_ALL` | `true` = accetta qualsiasi certificato SSL (necessario per provider con CA privata come Legalmail/Infocert) | `false` |
 
 > **Nota:** `SERVER_PORT` e `FRONTEND_PORT` sono parametri interni al container
 > e normalmente non è necessario modificarli.
+>
+> La configurazione della casella PEC (host, porta, credenziali IMAP) si imposta
+> direttamente dall'interfaccia web nella pagina **Impostazioni → PEC**; non
+> richiede variabili d'ambiente.
 
 ### Esempio con file `.env`
 

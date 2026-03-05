@@ -37,7 +37,7 @@ class BackupControllerTest {
         mockMvc.perform(get("/api/backup/version"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.version", notNullValue()))
-                .andExpect(jsonPath("$.version", is("3")));
+                .andExpect(jsonPath("$.version", is("4")));
     }
 
     @Test
@@ -77,7 +77,7 @@ class BackupControllerTest {
 
         mockMvc.perform(multipart("/api/backup/inspect").file(file))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.version", is("3")));
+                .andExpect(jsonPath("$.version", is("4")));
     }
 
     @Test

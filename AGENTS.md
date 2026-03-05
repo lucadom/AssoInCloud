@@ -25,7 +25,8 @@ The current domain models and features are:
 | Price lists (listini) | `PriceListItem` | Linked to products |
 | Products (prodotti) | — | Read-only product catalogue search |
 | Backup | — | Database backup/restore via API |
-| PEC inbox | — | Read-only IMAP access; stateless (no DB persistence) |
+| PEC inbox | — | Read-only IMAP access; stateless message access; IMAP config stored in `settings` table |
+| App settings | `AppSetting` | Key-value settings table; currently stores PEC IMAP configuration |
 
 ---
 
@@ -267,6 +268,7 @@ src/
   - `/api/backup` — backup/restore
   - `/api/auth` — login/logout (unauthenticated)
   - `/api/pec` — read-only IMAP inbox (folders, messages, attachments)
+  - `/api/settings` — application settings (currently PEC IMAP config)
 - CRUD: `GET`, `POST`, `PUT`, `DELETE` on resource endpoints.
 - File uploads: `POST` with `multipart/form-data`.
 - IDs are UUIDs (string).

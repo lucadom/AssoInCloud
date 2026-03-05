@@ -10,10 +10,13 @@ import {
   Group,
   Loader,
   Modal,
+  NumberInput,
+  PasswordInput,
   Stack,
   Switch,
   Tabs,
   Text,
+  TextInput,
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -23,6 +26,7 @@ import {
   IconDatabase,
   IconDownload,
   IconLayoutDashboard,
+  IconMail,
   IconRefresh,
   IconUpload,
 } from "@tabler/icons-react";
@@ -38,6 +42,7 @@ import {
   loadSettings,
   saveSettings,
 } from "@/lib/settings";
+import { type PecConfig, fetchPecConfig, savePecConfig } from "@/lib/api/settings";
 
 interface SettingsPageProps {
   dbVersion: string | null;
@@ -58,9 +63,25 @@ export function SettingsPage({ dbVersion: currentVersion }: SettingsPageProps) {
 
   const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
 
+  // PEC configuration
+  const [pecConfig, setPecConfig] = useState<PecConfig>({
+    host: "", port: 993, username: "", password: "", ssl: true, sslTrustAll: false, passwordSet: false,
+  });
+  const [pecLoading, setPecLoading] = useState(false);
+  const [pecSaving, setPecSaving] = useState(false);
+
   // Load settings from localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
     setAppSettings(loadSettings());
+  }, []);
+
+  // Load PEC configuration from the backend
+  useEffect(() => {
+    setPecLoading(true);
+    fetchPecConfig()
+      .then(setPecConfig)
+      .catch(() => { /* not configured yet, use defaults */ })
+      .finally(() => setPecLoading(false));
   }, []);
 
   function handleCardVisibilityChange(cardKey: DashboardCardKey, visible: boolean): void {
@@ -94,6 +115,27 @@ export function SettingsPage({ dbVersion: currentVersion }: SettingsPageProps) {
       setSelectedFile(null);
     } finally {
       setFileInspecting(false);
+    }
+  }
+
+  async function handleSavePec() {
+    setPecSaving(true);
+    try {
+      const saved = await savePecConfig(pecConfig);
+      setPecConfig(saved);
+      notifications.show({
+        title: "Configurazione salvata",
+        message: "Le impostazioni PEC sono state salvate con successo.",
+        color: "green",
+      });
+    } catch (err) {
+      notifications.show({
+        title: "Errore",
+        message: err instanceof Error ? err.message : "Impossibile salvare la configurazione PEC",
+        color: "red",
+      });
+    } finally {
+      setPecSaving(false);
     }
   }
 
@@ -151,6 +193,9 @@ export function SettingsPage({ dbVersion: currentVersion }: SettingsPageProps) {
             </Tabs.Tab>
             <Tabs.Tab value="backup" leftSection={<IconDatabase size={16} />}>
               Backup e ripristino
+            </Tabs.Tab>
+            <Tabs.Tab value="pec" leftSection={<IconMail size={16} />}>
+              PEC
             </Tabs.Tab>
           </Tabs.List>
 
@@ -283,6 +328,73 @@ export function SettingsPage({ dbVersion: currentVersion }: SettingsPageProps) {
                   </Button>
                 </Group>
               </Stack>
+            </Stack>
+          </Tabs.Panel>
+
+          {/* --- Tab: PEC --- */}
+          <Tabs.Panel value="pec">
+            <Stack gap="xl" maw={500}>
+              <Text size="sm" c="dimmed">
+                Configura l&apos;accesso alla casella PEC tramite IMAP. Le credenziali vengono salvate nel database.
+              </Text>
+
+              {pecLoading ? (
+                <Loader size="sm" />
+              ) : (
+                <Stack gap="md">
+                  <TextInput
+                    label="Server IMAP"
+                    placeholder="imaps.pec.example.com"
+                    value={pecConfig.host}
+                    onChange={(e) => { const v = e.currentTarget.value; setPecConfig((c) => ({ ...c, host: v })); }}
+                  />
+
+                  <NumberInput
+                    label="Porta"
+                    placeholder="993"
+                    value={pecConfig.port}
+                    min={1}
+                    max={65535}
+                    onChange={(v) => setPecConfig((c) => ({ ...c, port: Number(v) || 993 }))}
+                  />
+
+                  <TextInput
+                    label="Username"
+                    placeholder="nome@pec.example.com"
+                    value={pecConfig.username}
+                    onChange={(e) => { const v = e.currentTarget.value; setPecConfig((c) => ({ ...c, username: v })); }}
+                  />
+
+                  <PasswordInput
+                    label="Password"
+                    placeholder={pecConfig.passwordSet ? "Invariata (lascia vuoto per non modificarla)" : "Inserisci la password"}
+                    value={pecConfig.password}
+                    onChange={(e) => { const v = e.currentTarget.value; setPecConfig((c) => ({ ...c, password: v })); }}
+                  />
+
+                  <Switch
+                    label="Usa SSL/TLS"
+                    checked={pecConfig.ssl}
+                    onChange={(e) => { const v = e.currentTarget.checked; setPecConfig((c) => ({ ...c, ssl: v })); }}
+                  />
+
+                  <Switch
+                    label="Fidarsi di qualsiasi certificato SSL"
+                    description="Abilita se il provider PEC usa una CA privata (es. Legalmail/Infocert)"
+                    checked={pecConfig.sslTrustAll}
+                    onChange={(e) => { const v = e.currentTarget.checked; setPecConfig((c) => ({ ...c, sslTrustAll: v })); }}
+                  />
+
+                  <Group>
+                    <Button
+                      onClick={handleSavePec}
+                      loading={pecSaving}
+                    >
+                      Salva configurazione
+                    </Button>
+                  </Group>
+                </Stack>
+              )}
             </Stack>
           </Tabs.Panel>
         </Tabs>
