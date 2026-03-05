@@ -2,9 +2,9 @@ package it.assoincloud.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import org.junit.jupiter.api.Test;
 
 import it.assoincloud.backend.dto.PecSettingsDto;
 
