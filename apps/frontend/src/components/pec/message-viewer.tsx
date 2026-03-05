@@ -17,9 +17,12 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconCertificate, IconDownload, IconEye, IconMail, IconMailOpened, IconPaperclip } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
+import { IconCertificate, IconDownload, IconEye, IconFileText, IconMail, IconMailOpened, IconPaperclip } from "@tabler/icons-react";
 import type { PecMessage } from "@/types";
-import { getPecAttachmentPreviewUrl, getPecAttachmentUrl } from "@/lib/api/pec";
+import type { Invoice } from "@/types";
+import { fetchPecAttachmentAsInvoice, getPecAttachmentPreviewUrl, getPecAttachmentUrl, importPecAttachmentAsInvoice } from "@/lib/api/pec";
+import { InvoiceDetailModal } from "@/components/invoices/invoice-detail-modal";
 
 interface Props {
   message: PecMessage | null;
@@ -31,7 +34,60 @@ interface Props {
 export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnvelope }: Props) {
   const [openedMenuIndex, setOpenedMenuIndex] = useState<number | null>(null);
   const [pdfPreviewIndex, setPdfPreviewIndex] = useState<number | null>(null);
+  const [invoicePreview, setInvoicePreview] = useState<Invoice | null>(null);
+  const [invoicePreviewLoading, setInvoicePreviewLoading] = useState(false);
+  const [importingIndex, setImportingIndex] = useState<number | null>(null);
   const isMobile = useMediaQuery("(max-width: 48em)");
+
+  function isInvoiceFile(filename: string): boolean {
+    return filename.toLowerCase().endsWith(".p7m");
+  }
+
+  async function handleInvoicePreview(partIndex: number) {
+    if (!message) return;
+    setInvoicePreviewLoading(true);
+    try {
+      const invoice = await fetchPecAttachmentAsInvoice(message.folder, message.uid, partIndex, envelopeMode);
+      setInvoicePreview(invoice);
+    } catch (err) {
+      notifications.show({
+        title: "Errore",
+        message: err instanceof Error ? err.message : "Impossibile aprire la fattura",
+        color: "red",
+      });
+    } finally {
+      setInvoicePreviewLoading(false);
+    }
+  }
+
+  async function handleImportInvoice(partIndex: number) {
+    if (!message) return;
+    setImportingIndex(partIndex);
+    try {
+      const result = await importPecAttachmentAsInvoice(message.folder, message.uid, partIndex, envelopeMode);
+      if (result.updated > 0) {
+        notifications.show({
+          title: "Fattura aggiornata",
+          message: "La fattura era già presente ed è stata aggiornata.",
+          color: "blue",
+        });
+      } else {
+        notifications.show({
+          title: "Fattura importata",
+          message: "La fattura è stata importata con successo.",
+          color: "green",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Errore importazione",
+        message: err instanceof Error ? err.message : "Impossibile importare la fattura",
+        color: "red",
+      });
+    } finally {
+      setImportingIndex(null);
+    }
+  }
   if (!message) {
     return (
       <Stack align="center" justify="center" h="100%">
@@ -135,6 +191,24 @@ export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnv
                       Anteprima
                     </Menu.Item>
                   )}
+                  {isInvoiceFile(att.filename) && (
+                    <Menu.Item
+                      leftSection={<IconFileText size={14} />}
+                      disabled={invoicePreviewLoading}
+                      onClick={() => handleInvoicePreview(att.index)}
+                    >
+                      Anteprima fattura
+                    </Menu.Item>
+                  )}
+                  {isInvoiceFile(att.filename) && (
+                    <Menu.Item
+                      leftSection={<IconFileText size={14} />}
+                      disabled={importingIndex === att.index}
+                      onClick={() => handleImportInvoice(att.index)}
+                    >
+                      {importingIndex === att.index ? "Importazione..." : "Importa fattura"}
+                    </Menu.Item>
+                  )}
                   <Menu.Item
                     leftSection={<IconDownload size={14} />}
                     component="a"
@@ -165,6 +239,13 @@ export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnv
           </Text>
         )}
       </ScrollArea>
+
+      {/* Invoice preview modal */}
+      <InvoiceDetailModal
+        invoice={invoicePreview}
+        opened={invoicePreview !== null}
+        onClose={() => setInvoicePreview(null)}
+      />
 
       {/* PDF preview modal */}
       {pdfPreviewIndex !== null && message && (() => {

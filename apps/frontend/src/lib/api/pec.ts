@@ -1,4 +1,4 @@
-import type { PecFolder, PecMessage, PecMessageSummary } from "@/types";
+import type { Invoice, PecFolder, PecMessage, PecMessageSummary } from "@/types";
 import { getToken } from "./auth";
 import { authFetch } from "./auth-fetch";
 
@@ -112,4 +112,41 @@ export function getPecAttachmentPreviewUrl(
   if (token) params.set("token", token);
   if (envelope) params.set("envelope", "true");
   return `${API_BASE}/pec/attachments/${uid}/${partIndex}?${params}`;
+}
+
+/** Parse a PEC attachment (XML or P7M) as a FatturaPA invoice preview (not saved to DB). */
+export async function fetchPecAttachmentAsInvoice(
+  folder: string,
+  uid: number,
+  partIndex: number,
+  envelope = false
+): Promise<Invoice> {
+  const params = new URLSearchParams({ folder });
+  if (envelope) params.set("envelope", "true");
+  const res = await authFetch(`/pec/attachments/${uid}/${partIndex}/preview-as-invoice?${params}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? "Impossibile analizzare il file come fattura");
+  }
+  return res.json();
+}
+
+/** Import a PEC attachment (P7M) as a fattura, saving it to the database. */
+export async function importPecAttachmentAsInvoice(
+  folder: string,
+  uid: number,
+  partIndex: number,
+  envelope = false
+): Promise<{ imported: number; updated: number; skipped: number }> {
+  const params = new URLSearchParams({ folder });
+  if (envelope) params.set("envelope", "true");
+  const res = await authFetch(
+    `/pec/attachments/${uid}/${partIndex}/import-as-invoice?${params}`,
+    { method: "POST" }
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? "Impossibile importare la fattura");
+  }
+  return res.json();
 }

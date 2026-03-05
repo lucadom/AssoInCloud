@@ -133,24 +133,30 @@ public class InvoiceService {
     public ImportResultDto importXml(MultipartFile file) {
         try {
             String originalFileName = file.getOriginalFilename();
-            java.io.InputStream xmlInput;
+            byte[] bytes = file.getBytes();
+            return importXmlFromBytes(bytes, originalFileName);
+        } catch (Exception e) {
+            throw new RuntimeException("Errore durante l'elaborazione del file: " + e.getMessage(), e);
+        }
+    }
 
-            if (P7mContentExtractor.isP7mFile(originalFileName)) {
-                byte[] xmlBytes = P7mContentExtractor.extractContent(file.getBytes());
+    public ImportResultDto importXmlFromBytes(byte[] bytes, String filename) {
+        try {
+            java.io.InputStream xmlInput;
+            if (P7mContentExtractor.isP7mFile(filename)) {
+                byte[] xmlBytes = P7mContentExtractor.extractContent(bytes);
                 xmlInput = new ByteArrayInputStream(xmlBytes);
             } else {
-                xmlInput = file.getInputStream();
+                xmlInput = new ByteArrayInputStream(bytes);
             }
 
-            Invoice invoice = xmlParser.parse(xmlInput, originalFileName);
+            Invoice invoice = xmlParser.parse(xmlInput, filename);
 
-            // Upsert: if invoice already exists, overwrite it
             if (invoice.getSupplier() != null && invoice.getInvoiceNumber() != null) {
                 var existing = invoiceRepository.findBySupplier_VatNumberAndInvoiceNumber(
                         invoice.getSupplier().getVatNumber(), invoice.getInvoiceNumber());
                 if (existing.isPresent()) {
                     Invoice old = existing.get();
-                    // Remove old line items and attachments, then copy new data onto existing entity
                     old.getLineItems().clear();
                     old.getAttachments().clear();
                     copyInvoiceData(invoice, old);

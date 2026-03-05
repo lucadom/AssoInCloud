@@ -1,5 +1,6 @@
 package it.assoincloud.backend.controller;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -14,14 +15,19 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import it.assoincloud.backend.dto.ImportResultDto;
+import it.assoincloud.backend.dto.InvoiceDto;
 import it.assoincloud.backend.dto.PecFolderDto;
 import it.assoincloud.backend.dto.PecMessageDto;
 import it.assoincloud.backend.dto.PecMessageSummaryDto;
+import it.assoincloud.backend.service.FatturaElettronicaParser;
+import it.assoincloud.backend.service.P7mContentExtractor;
 import it.assoincloud.backend.service.PecService;
 
 @RestController
@@ -30,9 +36,14 @@ import it.assoincloud.backend.service.PecService;
 public class PecController {
 
     private final PecService pecService;
+    private final FatturaElettronicaParser xmlParser;
+    private final it.assoincloud.backend.service.InvoiceService invoiceService;
 
-    public PecController(PecService pecService) {
+    public PecController(PecService pecService, FatturaElettronicaParser xmlParser,
+            it.assoincloud.backend.service.InvoiceService invoiceService) {
         this.pecService = pecService;
+        this.xmlParser = xmlParser;
+        this.invoiceService = invoiceService;
     }
 
     private ResponseEntity<Map<String, String>> notConfigured() {
@@ -86,6 +97,47 @@ public class PecController {
     }
 
     record ReadStatusRequest(boolean read) {}
+
+    @GetMapping("/attachments/{uid}/{partIndex}/preview-as-invoice")
+    public ResponseEntity<?> previewAttachmentAsInvoice(
+            @PathVariable long uid,
+            @PathVariable int partIndex,
+            @RequestParam String folder,
+            @RequestParam(defaultValue = "false") boolean envelope) {
+        if (!pecService.isConfigured()) {
+            return notConfigured();
+        }
+        try {
+            PecService.AttachmentData data = pecService.getAttachmentBytes(folder, uid, partIndex, envelope);
+            byte[] xmlBytes = P7mContentExtractor.isP7mFile(data.filename())
+                    ? P7mContentExtractor.extractContent(data.bytes())
+                    : data.bytes();
+            var invoice = xmlParser.parse(new ByteArrayInputStream(xmlBytes), data.filename());
+            return ResponseEntity.ok(InvoiceDto.from(invoice));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Impossibile analizzare il file come fattura: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/attachments/{uid}/{partIndex}/import-as-invoice")
+    public ResponseEntity<?> importAttachmentAsInvoice(
+            @PathVariable long uid,
+            @PathVariable int partIndex,
+            @RequestParam String folder,
+            @RequestParam(defaultValue = "false") boolean envelope) {
+        if (!pecService.isConfigured()) {
+            return notConfigured();
+        }
+        try {
+            PecService.AttachmentData data = pecService.getAttachmentBytes(folder, uid, partIndex, envelope);
+            ImportResultDto result = invoiceService.importXmlFromBytes(data.bytes(), data.filename());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Impossibile importare la fattura: " + e.getMessage()));
+        }
+    }
 
     @GetMapping("/attachments/{uid}/{partIndex}")
     public ResponseEntity<Resource> downloadAttachment(
