@@ -99,3 +99,17 @@ export function getPecAttachmentUrl(
   if (envelope) params.set("envelope", "true");
   return `${API_BASE}/pec/attachments/${uid}/${partIndex}?${params}`;
 }
+
+/** Same as getPecAttachmentUrl but sets inline=true so the browser displays instead of downloading. */
+export function getPecAttachmentPreviewUrl(
+  folder: string,
+  uid: number,
+  partIndex: number,
+  envelope = false
+): string {
+  const token = getToken();
+  const params = new URLSearchParams({ folder, inline: "true" });
+  if (token) params.set("token", token);
+  if (envelope) params.set("envelope", "true");
+  return `${API_BASE}/pec/attachments/${uid}/${partIndex}?${params}`;
+}

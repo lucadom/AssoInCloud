@@ -92,15 +92,17 @@ public class PecController {
             @PathVariable long uid,
             @PathVariable int partIndex,
             @RequestParam String folder,
-            @RequestParam(defaultValue = "false") boolean envelope) {
+            @RequestParam(defaultValue = "false") boolean envelope,
+            @RequestParam(defaultValue = "false") boolean inline) {
         if (!pecService.isConfigured()) {
             return ResponseEntity.notFound().build();
         }
         PecService.AttachmentData data = pecService.getAttachmentBytes(folder, uid, partIndex, envelope);
         ByteArrayResource resource = new ByteArrayResource(data.bytes());
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentDisposition(
-                ContentDisposition.attachment().filename(data.filename()).build());
+        headers.setContentDisposition(inline
+                ? ContentDisposition.inline().filename(data.filename()).build()
+                : ContentDisposition.attachment().filename(data.filename()).build());
         headers.setContentType(MediaType.parseMediaType(data.contentType()));
         headers.setContentLength(data.bytes().length);
         return ResponseEntity.ok().headers(headers).body(resource);

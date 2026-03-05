@@ -1,20 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import {
   Anchor,
   Badge,
+  Box,
   Button,
   Divider,
   Group,
+  Menu,
+  Modal,
   ScrollArea,
   Stack,
   Text,
   Title,
   Tooltip,
 } from "@mantine/core";
-import { IconCertificate, IconMail, IconMailOpened, IconPaperclip } from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
+import { IconCertificate, IconDownload, IconEye, IconMail, IconMailOpened, IconPaperclip } from "@tabler/icons-react";
 import type { PecMessage } from "@/types";
-import { getPecAttachmentUrl } from "@/lib/api/pec";
+import { getPecAttachmentPreviewUrl, getPecAttachmentUrl } from "@/lib/api/pec";
 
 interface Props {
   message: PecMessage | null;
@@ -24,6 +29,9 @@ interface Props {
 }
 
 export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnvelope }: Props) {
+  const [openedMenuIndex, setOpenedMenuIndex] = useState<number | null>(null);
+  const [pdfPreviewIndex, setPdfPreviewIndex] = useState<number | null>(null);
+  const isMobile = useMediaQuery("(max-width: 48em)");
   if (!message) {
     return (
       <Stack align="center" justify="center" h="100%">
@@ -90,17 +98,53 @@ export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnv
           <Group gap="sm" wrap="wrap">
             <IconPaperclip size={16} />
             {message.attachments.map((att) => (
-              <Anchor
+              <Menu
                 key={att.index}
-                href={getPecAttachmentUrl(message.folder, message.uid, att.index, envelopeMode)}
-                target="_blank"
-                rel="noopener noreferrer"
-                size="sm"
+                opened={openedMenuIndex === att.index}
+                onClose={() => setOpenedMenuIndex(null)}
+                position="bottom-start"
+                withinPortal
               >
-                <Badge variant="outline" size="sm">
-                  {att.filename}
-                </Badge>
-              </Anchor>
+                <Menu.Target>
+                  <Box
+                    component="span"
+                    style={{ cursor: "pointer" }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setOpenedMenuIndex(att.index);
+                    }}
+                  >
+                    <Anchor
+                      href={getPecAttachmentUrl(message.folder, message.uid, att.index, envelopeMode)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="sm"
+                    >
+                      <Badge variant="outline" size="sm" style={{ cursor: "pointer" }}>
+                        {att.filename}
+                      </Badge>
+                    </Anchor>
+                  </Box>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  {(att.contentType === "application/pdf" || att.filename.toLowerCase().endsWith(".pdf")) && (
+                    <Menu.Item
+                      leftSection={<IconEye size={14} />}
+                      onClick={() => setPdfPreviewIndex(att.index)}
+                    >
+                      Anteprima
+                    </Menu.Item>
+                  )}
+                  <Menu.Item
+                    leftSection={<IconDownload size={14} />}
+                    component="a"
+                    href={getPecAttachmentUrl(message.folder, message.uid, att.index, envelopeMode)}
+                    download={att.filename}
+                  >
+                    Download
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             ))}
           </Group>
           <Divider />
@@ -121,6 +165,32 @@ export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnv
           </Text>
         )}
       </ScrollArea>
+
+      {/* PDF preview modal */}
+      {pdfPreviewIndex !== null && message && (() => {
+        const att = message.attachments.find((a) => a.index === pdfPreviewIndex);
+        return (
+          <Modal
+            opened={pdfPreviewIndex !== null}
+            onClose={() => setPdfPreviewIndex(null)}
+            title={att?.filename ?? "Anteprima PDF"}
+            size="90%"
+            fullScreen={!!isMobile}
+            centered
+          >
+            <iframe
+              src={getPecAttachmentPreviewUrl(message.folder, message.uid, pdfPreviewIndex, envelopeMode)}
+              style={{
+                width: "100%",
+                height: "75vh",
+                border: "1px solid var(--mantine-color-gray-3)",
+                borderRadius: 8,
+              }}
+              title="Anteprima PDF"
+            />
+          </Modal>
+        );
+      })()}
     </Stack>
   );
 }
