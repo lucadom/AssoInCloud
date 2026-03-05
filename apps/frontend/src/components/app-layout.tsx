@@ -25,6 +25,7 @@ import {
   IconLogout,
   IconSettings,
   IconLayoutDashboard,
+  IconMail,
 } from "@tabler/icons-react";
 import { InvoicesPage } from "./invoices-page";
 import { SuppliersPage } from "./suppliers-page";
@@ -35,6 +36,7 @@ import { MembersPage } from "./members-page";
 import { logout } from "@/lib/api/auth";
 import { fetchCurrentVersion } from "@/lib/api/backup";
 import { SettingsPage } from "./settings-page";
+import { PecInboxPage } from "./pec-inbox-page";
 const DashboardPage = dynamic(
   async () => {
     const mod = await import("./dashboard-page");
@@ -43,7 +45,7 @@ const DashboardPage = dynamic(
   { ssr: false }
 );
 
-type Page = "dashboard" | "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings";
+type Page = "dashboard" | "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings" | "pec";
 
 const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] = [
   { label: "Dashboard", value: "dashboard", icon: IconLayoutDashboard },
@@ -51,6 +53,7 @@ const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] =
   { label: "Fornitori", value: "suppliers", icon: IconUsers },
   { label: "Prodotti", value: "products", icon: IconPackages },
   { label: "Listini", value: "price-lists", icon: IconListDetails },
+  { label: "PEC", value: "pec", icon: IconMail },
 ];
 
 export function AppLayout() {
@@ -165,6 +168,7 @@ export function AppLayout() {
         {activePage === "members" && <MembersPage />}
         {activePage === "birthdays" && <BirthdaysPage />}
         {activePage === "settings" && <SettingsPage dbVersion={dbVersion} />}
+        {activePage === "pec" && <PecInboxPage />}
       </AppShell.Main>
     </AppShell>
   );

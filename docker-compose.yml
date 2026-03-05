@@ -16,6 +16,17 @@ services:
       # to log in. When empty, no authentication is required.
       ASSOINCLOUD_PASSWORD: "${ASSOINCLOUD_PASSWORD:-}"
 
+      # PEC inbox access via IMAP (read-only).
+      # When ASSOINCLOUD_PEC_HOST is empty, the PEC page shows a "not configured" message.
+      ASSOINCLOUD_PEC_HOST: "${ASSOINCLOUD_PEC_HOST:-}"
+      ASSOINCLOUD_PEC_PORT: "${ASSOINCLOUD_PEC_PORT:-993}"
+      ASSOINCLOUD_PEC_USERNAME: "${ASSOINCLOUD_PEC_USERNAME:-}"
+      ASSOINCLOUD_PEC_PASSWORD: "${ASSOINCLOUD_PEC_PASSWORD:-}"
+      ASSOINCLOUD_PEC_SSL: "${ASSOINCLOUD_PEC_SSL:-true}"
+      # Set to true if the PEC provider uses a private CA not in the JRE trust store
+      # (e.g. Legalmail/Infocert). Bypasses PKIX certificate chain validation.
+      ASSOINCLOUD_PEC_SSL_TRUST_ALL: "${ASSOINCLOUD_PEC_SSL_TRUST_ALL:-false}"
+
       # Internal ports (normally you don't need to change these)
       SERVER_PORT: "${SERVER_PORT:-8080}"
       FRONTEND_PORT: "${FRONTEND_PORT:-3000}"

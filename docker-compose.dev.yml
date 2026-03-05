@@ -25,6 +25,12 @@ services:
       ASSOINCLOUD_DB_PATH: /data/assoincloud.db
       ASSOINCLOUD_PASSWORD: "${ASSOINCLOUD_PASSWORD:-}"
       JAVA_OPTS: "${JAVA_OPTS:--Xms128m -Xmx512m}"
+      ASSOINCLOUD_PEC_HOST: "${ASSOINCLOUD_PEC_HOST:-}"
+      ASSOINCLOUD_PEC_PORT: "${ASSOINCLOUD_PEC_PORT:-993}"
+      ASSOINCLOUD_PEC_USERNAME: "${ASSOINCLOUD_PEC_USERNAME:-}"
+      ASSOINCLOUD_PEC_PASSWORD: "${ASSOINCLOUD_PEC_PASSWORD:-}"
+      ASSOINCLOUD_PEC_SSL: "${ASSOINCLOUD_PEC_SSL:-true}"
+      ASSOINCLOUD_PEC_SSL_TRUST_ALL: "${ASSOINCLOUD_PEC_SSL_TRUST_ALL:-false}"
     volumes:
       # Mount the backend source for hot-reload via devtools
       - ./apps/backend/src:/app/src:cached

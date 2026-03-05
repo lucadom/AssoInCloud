@@ -15,8 +15,17 @@ AssoInCloud is an Italian association management application.
 | Frontend | Next.js 16, React 19, Mantine 8, TypeScript 5 | `apps/frontend/` |
 | Database | SQLite (file `data/assoincloud.db`, in-memory for tests) | — |
 
-The domain models are **Suppliers** (fornitori) and **Invoices** (fatture),
-with child entities **InvoiceLineItem** and **InvoiceAttachment**.
+The current domain models and features are:
+
+| Feature | Domain | Notes |
+|---------|--------|-------|
+| Invoices (fatture) | `Invoice`, `InvoiceLineItem`, `InvoiceAttachment` | Import via CSV and FatturaPA XML; P7M extraction |
+| Suppliers (fornitori) | `Supplier` | Auto-created during invoice import |
+| Members (soci) | `Member` | Registry with fiscal code; CSV/XLSX import and export |
+| Price lists (listini) | `PriceListItem` | Linked to products |
+| Products (prodotti) | — | Read-only product catalogue search |
+| Backup | — | Database backup/restore via API |
+| PEC inbox | — | Read-only IMAP access; stateless (no DB persistence) |
 
 ---
 
@@ -76,6 +85,14 @@ user (e.g. `"Errore durante l'elaborazione del CSV"`).
 | Create | Crea / Nuova |
 | Edit | Modifica |
 | Save | Salva |
+| Member | Socio |
+| Fiscal code | Codice fiscale |
+| Birth date | Data di nascita |
+| Membership date | Data di accettazione |
+| Price list | Listino |
+| PEC inbox | Casella PEC |
+| Folder | Cartella |
+| Unread | Da leggere |
 
 ---
 
@@ -226,19 +243,53 @@ src/
 ├── app/              # Next.js App Router (layout, pages)
 ├── components/       # React components
 │   ├── invoices/     # Invoice sub-components (modals, table)
-│   └── suppliers/    # Supplier sub-components
+│   ├── members/      # Member sub-components
+│   ├── suppliers/    # Supplier sub-components
+│   └── pec/          # PEC inbox sub-components (folder-list, message-list, message-viewer)
 ├── lib/api/          # API client functions (fetch wrappers)
 └── types/            # TypeScript interfaces
 ```
 
+**Navigation** is managed entirely by `app-layout.tsx`. To add a new page:
+1. Add the page string to the `Page` union type.
+2. Add an entry to the `navItems` array with `label`, `value`, and an icon from `@tabler/icons-react`.
+3. Import the new page component and render it conditionally inside `<AppShell.Main>`.
+
 ### 5.3 REST API conventions
 
 - Base path: `/api/`
-- Resources: `/api/invoices`, `/api/suppliers`
+- Current resources:
+  - `/api/invoices` — invoice CRUD, CSV/XML import, XLSX export
+  - `/api/suppliers` — supplier CRUD
+  - `/api/members` — member CRUD, CSV/XLSX import/export
+  - `/api/products` — product search
+  - `/api/price-lists` — price list CRUD
+  - `/api/backup` — backup/restore
+  - `/api/auth` — login/logout (unauthenticated)
+  - `/api/pec` — read-only IMAP inbox (folders, messages, attachments)
 - CRUD: `GET`, `POST`, `PUT`, `DELETE` on resource endpoints.
 - File uploads: `POST` with `multipart/form-data`.
 - IDs are UUIDs (string).
 - Response DTOs — never return raw entities.
+
+### 5.4 Stateless services (no DB persistence)
+
+Not every service needs an entity or Flyway migration. For features that consume
+external data without storing it (e.g. the PEC/IMAP integration), the pattern is:
+
+```
+Controller  →  Service  →  External system (IMAP, HTTP, …)
+     ↕
+    DTO
+```
+
+- No entity, no repository, no migration.
+- Configuration comes exclusively from `@Value`-injected properties backed by
+  env vars (e.g. `ASSOINCLOUD_PEC_HOST`, `ASSOINCLOUD_PEC_PASSWORD`).
+- The service exposes an `isConfigured()` guard; the controller returns HTTP 404
+  with an Italian error message when the feature is not configured.
+- Document the required env vars in `application.yaml`, `docker-compose.yml`,
+  `docker-compose.dev.yml`, `DEV.md`, and `README.md`.
 
 ---
 
@@ -280,11 +331,18 @@ src/
    ```bash
    cd apps/frontend && npm run build
    ```
+7. **Update documentation** — after every feature addition or change, update
+   the relevant sections in `AGENTS.md`, `DEV.md`, and `README.md`:
+   - New env vars → add to the variables tables in `DEV.md` and `README.md`.
+   - New domain model or feature → update the feature table in `AGENTS.md` §1.
+   - New REST endpoint → add to the resources list in `AGENTS.md` §5.3.
+   - New terminology → add to the terminology table in `AGENTS.md` §2.3.
 
 ### 7.3 Commit discipline
 
 - Each logical change should be self-contained and tested.
 - Do not leave the codebase in a broken state (tests must pass).
+- Documentation must be up to date before the change is considered done.
 
 ---
 
@@ -301,14 +359,19 @@ src/
 - **Don't write Italian code identifiers** — all code is in English.
 - **Don't skip tests** — every change must have corresponding test coverage.
 - **Don't use `ddl-auto=update`** — all schema changes go through Flyway.
+- **Don't hardcode configuration** — new external integrations (IMAP, SMTP, …)
+  must read credentials exclusively from `@Value`-injected env vars; never embed
+  host names, usernames, or passwords in source code.
+- **Don't skip documentation** — `AGENTS.md`, `DEV.md`, and `README.md` must
+  reflect the current state of the project after every change.
 
 ---
 
 ## 9. Extending the Project — Checklist
 
-When adding a new feature (e.g. a new entity or endpoint):
+When adding a new **persisted** feature (new entity + DB table):
 
-- [ ] Flyway migration for schema changes
+- [ ] Flyway migration (`V<N>__description.sql`) for schema changes
 - [ ] JPA entity class in `entity/`
 - [ ] Spring Data repository in `repository/`
 - [ ] Service class with business logic in `service/`
@@ -319,3 +382,20 @@ When adding a new feature (e.g. a new entity or endpoint):
 - [ ] API client function in `src/lib/api/`
 - [ ] UI component(s) with Italian labels
 - [ ] Run all tests and frontend build to confirm nothing is broken
+- [ ] Update `AGENTS.md` §1 (feature table), §2.3 (terminology), §5.3 (API list)
+- [ ] Update env var tables in `DEV.md` and `README.md`
+
+When adding a new **stateless** feature (external integration, no DB):
+
+- [ ] Service class (reads config from `@Value` env vars; exposes `isConfigured()` guard)
+- [ ] DTO record(s) in `dto/`
+- [ ] REST controller returning HTTP 404 with Italian message when not configured
+- [ ] Unit tests for `isConfigured()` and any parsing/transformation logic
+- [ ] Controller integration tests verifying the "not configured" 404 path
+- [ ] New env vars documented in `application.yaml`, `docker-compose.yml`, `docker-compose.dev.yml`
+- [ ] TypeScript type in `src/types/`
+- [ ] API client function in `src/lib/api/` (handle 404 → user-friendly `notConfigured` flag)
+- [ ] UI component(s) with Italian labels; show an `Alert` when `notConfigured`
+- [ ] Run all tests and frontend build to confirm nothing is broken
+- [ ] Update `AGENTS.md` §1, §2.3, §5.3 (stateless section)
+- [ ] Update env var tables in `DEV.md` and `README.md`

@@ -22,6 +22,13 @@ spring:
 
 assoincloud:
   password: ${ASSOINCLOUD_PASSWORD:}
+  pec:
+    host: ${ASSOINCLOUD_PEC_HOST:}
+    port: ${ASSOINCLOUD_PEC_PORT:993}
+    username: ${ASSOINCLOUD_PEC_USERNAME:}
+    password: ${ASSOINCLOUD_PEC_PASSWORD:}
+    ssl: ${ASSOINCLOUD_PEC_SSL:true}
+    ssl-trust-all: ${ASSOINCLOUD_PEC_SSL_TRUST_ALL:false}
 
 server:
   tomcat:

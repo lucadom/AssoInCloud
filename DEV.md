@@ -187,8 +187,12 @@ docker compose -f docker-compose.dev.yml up --build
 | `ASSOINCLOUD_PASSWORD` | Password di accesso. Vuota = autenticazione disabilitata | _(vuota)_ |
 | `ASSOINCLOUD_PORT` | Porta nginx esposta dall'host (solo Docker) | `80` |
 | `JAVA_OPTS` | Opzioni JVM | `-Xms128m -Xmx512m` |
-| `NEXT_PUBLIC_API_URL` | URL base delle API per il frontend | `http://localhost:8080/api` (locale) · `/api` (Docker) |
-
+| `NEXT_PUBLIC_API_URL` | URL base delle API per il frontend | `http://localhost:8080/api` (locale) · `/api` (Docker) || `ASSOINCLOUD_PEC_HOST` | Host del server IMAP PEC. Vuoto = funzione PEC disabilitata | _(vuoto)_ |
+| `ASSOINCLOUD_PEC_PORT` | Porta del server IMAP PEC | `993` |
+| `ASSOINCLOUD_PEC_USERNAME` | Username (indirizzo PEC) | _(vuoto)_ |
+| `ASSOINCLOUD_PEC_PASSWORD` | Password della casella PEC | _(vuoto)_ |
+| `ASSOINCLOUD_PEC_SSL` | Usa IMAPS (SSL/TLS). `true` = IMAPS, `false` = IMAP plain | `true` |
+| `ASSOINCLOUD_PEC_SSL_TRUST_ALL` | `true` = accetta qualsiasi certificato SSL (necessario per provider PEC con CA privata come Legalmail/Infocert) | `false` |
 Puoi definirle in un file `.env` nella root del progetto (git-ignored):
 
 ```env
