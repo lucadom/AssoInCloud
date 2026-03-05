@@ -34,6 +34,7 @@ export function PecInboxPage() {
   const [loadingFolders, setLoadingFolders] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(false);
+  const [envelopeMode, setEnvelopeMode] = useState(false);
 
   useEffect(() => {
     setLoadingFolders(true);
@@ -86,7 +87,25 @@ export function PecInboxPage() {
 
   function handleMessageSelect(msg: PecMessageSummary) {
     setLoadingMessage(true);
-    fetchPecMessage(msg.folder, msg.uid)
+    setEnvelopeMode(false);
+    fetchPecMessage(msg.folder, msg.uid, false)
+      .then(setSelectedMessage)
+      .catch((err: unknown) =>
+        notifications.show({
+          title: "Errore",
+          message: err instanceof Error ? err.message : "Errore sconosciuto",
+          color: "red",
+        })
+      )
+      .finally(() => setLoadingMessage(false));
+  }
+
+  function handleToggleEnvelope() {
+    if (!selectedMessage) return;
+    const newMode = !envelopeMode;
+    setEnvelopeMode(newMode);
+    setLoadingMessage(true);
+    fetchPecMessage(selectedMessage.folder, selectedMessage.uid, newMode)
       .then(setSelectedMessage)
       .catch((err: unknown) =>
         notifications.show({
@@ -226,7 +245,12 @@ export function PecInboxPage() {
         <Box style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <Box pos="relative" style={{ flex: 1, overflow: "hidden" }}>
             <LoadingOverlay visible={loadingMessage} loaderProps={{ size: "sm" }} />
-            <MessageViewer message={selectedMessage} onToggleRead={handleToggleRead} />
+            <MessageViewer
+              message={selectedMessage}
+              envelopeMode={envelopeMode}
+              onToggleRead={handleToggleRead}
+              onToggleEnvelope={handleToggleEnvelope}
+            />
           </Box>
         </Box>
       </Box>

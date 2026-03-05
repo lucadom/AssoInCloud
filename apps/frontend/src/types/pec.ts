@@ -25,4 +25,5 @@ export interface PecMessage extends PecMessageSummary {
   bodyHtml: string | null;
   bodyText: string | null;
   attachments: PecAttachment[];
+  bustaTransporto: boolean;
 }

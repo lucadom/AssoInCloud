@@ -47,14 +47,15 @@ export async function fetchPecMessages(
   return res.json();
 }
 
-/** Fetch the full content of a single message (marks it as read on the server). */
+/** Fetch the full content of a single message. Pass envelope=true to view the raw PEC transport envelope instead of the extracted inner message. */
 export async function fetchPecMessage(
   folder: string,
-  uid: number
+  uid: number,
+  envelope = false
 ): Promise<PecMessage> {
-  const res = await authFetch(
-    `/pec/messages/${uid}?folder=${encodeURIComponent(folder)}`
-  );
+  const params = new URLSearchParams({ folder });
+  if (envelope) params.set("envelope", "true");
+  const res = await authFetch(`/pec/messages/${uid}?${params}`);
   if (!res.ok) {
     throw new Error("Errore nel caricamento del messaggio");
   }
@@ -89,12 +90,12 @@ export async function setPecReadStatus(
 export function getPecAttachmentUrl(
   folder: string,
   uid: number,
-  partIndex: number
+  partIndex: number,
+  envelope = false
 ): string {
   const token = getToken();
   const params = new URLSearchParams({ folder });
-  if (token) {
-    params.set("token", token);
-  }
+  if (token) params.set("token", token);
+  if (envelope) params.set("envelope", "true");
   return `${API_BASE}/pec/attachments/${uid}/${partIndex}?${params}`;
 }

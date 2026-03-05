@@ -64,11 +64,12 @@ public class PecController {
     @GetMapping("/messages/{uid}")
     public ResponseEntity<?> getMessage(
             @PathVariable long uid,
-            @RequestParam String folder) {
+            @RequestParam String folder,
+            @RequestParam(defaultValue = "false") boolean envelope) {
         if (!pecService.isConfigured()) {
             return notConfigured();
         }
-        PecMessageDto message = pecService.getMessage(folder, uid);
+        PecMessageDto message = pecService.getMessage(folder, uid, envelope);
         return ResponseEntity.ok(message);
     }
 
@@ -90,11 +91,12 @@ public class PecController {
     public ResponseEntity<Resource> downloadAttachment(
             @PathVariable long uid,
             @PathVariable int partIndex,
-            @RequestParam String folder) {
+            @RequestParam String folder,
+            @RequestParam(defaultValue = "false") boolean envelope) {
         if (!pecService.isConfigured()) {
             return ResponseEntity.notFound().build();
         }
-        PecService.AttachmentData data = pecService.getAttachmentBytes(folder, uid, partIndex);
+        PecService.AttachmentData data = pecService.getAttachmentBytes(folder, uid, partIndex, envelope);
         ByteArrayResource resource = new ByteArrayResource(data.bytes());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(

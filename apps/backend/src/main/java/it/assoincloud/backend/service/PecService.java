@@ -27,6 +27,7 @@ import jakarta.mail.Session;
 import jakarta.mail.Store;
 import jakarta.mail.UIDFolder;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class PecService {
@@ -113,7 +114,7 @@ public class PecService {
         }
     }
 
-    public PecMessageDto getMessage(String folderName, long uid) {
+    public PecMessageDto getMessage(String folderName, long uid, boolean envelope) {
         try (Store store = openStore()) {
             Folder folder = store.getFolder(folderName);
             folder.open(Folder.READ_ONLY);
@@ -124,9 +125,24 @@ public class PecService {
                     throw new IllegalArgumentException("Messaggio non trovato");
                 }
 
-                String bodyHtml = extractBodyHtml(msg);
-                String bodyText = extractBodyText(msg);
-                List<PecAttachmentDto> attachments = extractAttachments(msg);
+                boolean isBusta = !envelope && detectBustaTransporto(msg);
+
+                if (isBusta) {
+                    Message innerMsg = extractPostacertMessage(msg);
+                    if (innerMsg != null) {
+                        return new PecMessageDto(
+                                uid,
+                                folderName,
+                                getFrom(innerMsg),
+                                innerMsg.getSubject(),
+                                formatDate(innerMsg.getSentDate()),
+                                msg.getFlags().contains(Flags.Flag.SEEN),
+                                extractBodyHtml(innerMsg),
+                                extractBodyText(innerMsg),
+                                extractAttachments(innerMsg),
+                                true);
+                    }
+                }
 
                 return new PecMessageDto(
                         uid,
@@ -135,9 +151,10 @@ public class PecService {
                         msg.getSubject(),
                         formatDate(msg.getSentDate()),
                         msg.getFlags().contains(Flags.Flag.SEEN),
-                        bodyHtml,
-                        bodyText,
-                        attachments);
+                        extractBodyHtml(msg),
+                        extractBodyText(msg),
+                        extractAttachments(msg),
+                        false);
             } finally {
                 folder.close(false);
             }
@@ -168,7 +185,7 @@ public class PecService {
     public record AttachmentData(byte[] bytes, String contentType, String filename) {
     }
 
-    public AttachmentData getAttachmentBytes(String folderName, long uid, int partIndex) {
+    public AttachmentData getAttachmentBytes(String folderName, long uid, int partIndex, boolean envelope) {
         try (Store store = openStore()) {
             Folder folder = store.getFolder(folderName);
             folder.open(Folder.READ_ONLY);
@@ -176,9 +193,19 @@ public class PecService {
                 UIDFolder uidFolder = (UIDFolder) folder;
                 Message msg = uidFolder.getMessageByUID(uid);
                 if (msg == null) {
-                    throw new IllegalArgumentException("Messaggio non trovato");
+                    throw new IllegalArgumentException("Allegato non trovato");
                 }
-                List<Part> attachmentParts = collectAttachmentParts(msg);
+
+                List<Part> attachmentParts;
+                if (!envelope && detectBustaTransporto(msg)) {
+                    Message innerMsg = extractPostacertMessage(msg);
+                    attachmentParts = innerMsg != null
+                            ? collectAttachmentParts(innerMsg)
+                            : collectAttachmentParts(msg);
+                } else {
+                    attachmentParts = collectAttachmentParts(msg);
+                }
+
                 if (partIndex < 0 || partIndex >= attachmentParts.size()) {
                     throw new IllegalArgumentException("Allegato non trovato");
                 }
@@ -196,6 +223,39 @@ public class PecService {
         } catch (MessagingException | IOException e) {
             throw new RuntimeException("Errore nel download dell'allegato: " + e.getMessage(), e);
         }
+    }
+
+    // ---- busta di trasporto helpers ----
+
+    /**
+     * Returns true if the message is a PEC "busta di trasporto" (transport envelope),
+     * detected by the presence of a "postacert.eml" attachment.
+     */
+    private boolean detectBustaTransporto(Message msg) throws MessagingException, IOException {
+        List<Part> parts = collectAttachmentParts(msg);
+        for (Part part : parts) {
+            if ("postacert.eml".equalsIgnoreCase(part.getFileName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Parses and returns the inner "postacert.eml" message contained
+     * inside a PEC transport envelope, or null if not found.
+     */
+    private Message extractPostacertMessage(Message outerMsg) throws MessagingException, IOException {
+        List<Part> parts = collectAttachmentParts(outerMsg);
+        for (Part part : parts) {
+            if ("postacert.eml".equalsIgnoreCase(part.getFileName())) {
+                Session session = Session.getDefaultInstance(new Properties());
+                try (InputStream is = part.getInputStream()) {
+                    return new MimeMessage(session, is);
+                }
+            }
+        }
+        return null;
     }
 
     // ---- private helpers ----

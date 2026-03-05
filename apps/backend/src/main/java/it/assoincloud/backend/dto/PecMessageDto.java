@@ -11,5 +11,6 @@ public record PecMessageDto(
         boolean read,
         String bodyHtml,
         String bodyText,
-        List<PecAttachmentDto> attachments) {
+        List<PecAttachmentDto> attachments,
+        boolean bustaTransporto) {
 }

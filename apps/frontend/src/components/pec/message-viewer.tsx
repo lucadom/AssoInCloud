@@ -10,17 +10,20 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from "@mantine/core";
-import { IconMail, IconMailOpened, IconPaperclip } from "@tabler/icons-react";
+import { IconCertificate, IconMail, IconMailOpened, IconPaperclip } from "@tabler/icons-react";
 import type { PecMessage } from "@/types";
 import { getPecAttachmentUrl } from "@/lib/api/pec";
 
 interface Props {
   message: PecMessage | null;
+  envelopeMode: boolean;
   onToggleRead: (msg: PecMessage, read: boolean) => void;
+  onToggleEnvelope: () => void;
 }
 
-export function MessageViewer({ message, onToggleRead }: Props) {
+export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnvelope }: Props) {
   if (!message) {
     return (
       <Stack align="center" justify="center" h="100%">
@@ -43,6 +46,29 @@ export function MessageViewer({ message, onToggleRead }: Props) {
             {new Date(message.date).toLocaleString("it-IT")}
           </Text>
         </Stack>
+        {message.bustaTransporto && (
+          <Tooltip
+            label={
+              envelopeMode
+                ? "Stai visualizzando la busta di trasporto con i dati di certificazione."
+                : "Questo messaggio è una busta di trasporto PEC. Viene mostrato il messaggio originale."
+            }
+            multiline
+            w={260}
+            withArrow
+          >
+            <Button
+              variant="subtle"
+              color={envelopeMode ? "gray" : "blue"}
+              size="xs"
+              leftSection={<IconCertificate size={14} />}
+              onClick={onToggleEnvelope}
+              style={{ flexShrink: 0 }}
+            >
+              {envelopeMode ? "Indietro" : "Visualizza busta"}
+            </Button>
+          </Tooltip>
+        )}
         <Button
           variant="subtle"
           color="gray"
@@ -66,7 +92,7 @@ export function MessageViewer({ message, onToggleRead }: Props) {
             {message.attachments.map((att) => (
               <Anchor
                 key={att.index}
-                href={getPecAttachmentUrl(message.folder, message.uid, att.index)}
+                href={getPecAttachmentUrl(message.folder, message.uid, att.index, envelopeMode)}
                 target="_blank"
                 rel="noopener noreferrer"
                 size="sm"
