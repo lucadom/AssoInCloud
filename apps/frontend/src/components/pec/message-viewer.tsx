@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import {
-  Anchor,
   Badge,
-  Box,
   Button,
+  ActionIcon,
   Divider,
   Group,
   Menu,
@@ -18,7 +17,7 @@ import {
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { IconCertificate, IconDownload, IconEye, IconFileText, IconMail, IconMailOpened, IconPaperclip } from "@tabler/icons-react";
+import { IconCertificate, IconDownload, IconEye, IconFileText, IconMail, IconMailOpened, IconPaperclip, IconX } from "@tabler/icons-react";
 import type { PecMessage } from "@/types";
 import type { Invoice } from "@/types";
 import { fetchPecAttachmentAsInvoice, getPecAttachmentPreviewUrl, getPecAttachmentUrl, importPecAttachmentAsInvoice } from "@/lib/api/pec";
@@ -29,9 +28,11 @@ interface Props {
   envelopeMode: boolean;
   onToggleRead: (msg: PecMessage, read: boolean) => void;
   onToggleEnvelope: () => void;
+  hideSubject?: boolean;
+  onClose?: () => void;
 }
 
-export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnvelope }: Props) {
+export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnvelope, hideSubject = false, onClose }: Props) {
   const [openedMenuIndex, setOpenedMenuIndex] = useState<number | null>(null);
   const [pdfPreviewIndex, setPdfPreviewIndex] = useState<number | null>(null);
   const [invoicePreview, setInvoicePreview] = useState<Invoice | null>(null);
@@ -110,7 +111,12 @@ export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnv
             {new Date(message.date).toLocaleString("it-IT")}
           </Text>
         </Stack>
-        {message.bustaTransporto && (
+        {onClose && (
+          <ActionIcon variant="subtle" color="gray" onClick={onClose} style={{ flexShrink: 0 }}>
+            <IconX size={16} />
+          </ActionIcon>
+        )}
+        {(message.bustaTransporto || envelopeMode) && (
           <Tooltip
             label={
               envelopeMode
@@ -162,25 +168,15 @@ export function MessageViewer({ message, envelopeMode, onToggleRead, onToggleEnv
                 withinPortal
               >
                 <Menu.Target>
-                  <Box
-                    component="span"
+                  <Badge
+                    variant="outline"
+                    size="sm"
                     style={{ cursor: "pointer" }}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setOpenedMenuIndex(att.index);
-                    }}
+                    onClick={() => setOpenedMenuIndex(att.index)}
+                    onContextMenu={(e) => e.preventDefault()}
                   >
-                    <Anchor
-                      href={getPecAttachmentUrl(message.folder, message.uid, att.index, envelopeMode)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      size="sm"
-                    >
-                      <Badge variant="outline" size="sm" style={{ cursor: "pointer" }}>
-                        {att.filename}
-                      </Badge>
-                    </Anchor>
-                  </Box>
+                    {att.filename}
+                  </Badge>
                 </Menu.Target>
                 <Menu.Dropdown>
                   {(att.contentType === "application/pdf" || att.filename.toLowerCase().endsWith(".pdf")) && (

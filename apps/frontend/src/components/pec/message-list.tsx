@@ -52,6 +52,7 @@ export function MessageList({ messages, selectedUid, onSelect, onToggleRead }: P
                 position="left"
               >
                 <ActionIcon
+                  component="span"
                   variant="subtle"
                   color="gray"
                   size="xs"

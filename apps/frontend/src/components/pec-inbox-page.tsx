@@ -2,15 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  ActionIcon,
   Alert,
   Box,
+  Group,
   LoadingOverlay,
+  Modal,
   ScrollArea,
   Text,
   Title,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { IconMailExclamation } from "@tabler/icons-react";
+import { IconArrowLeft, IconMailExclamation } from "@tabler/icons-react";
 import type { PecFolder, PecMessage, PecMessageSummary } from "@/types";
 import {
   fetchPecFolders,
@@ -24,13 +28,14 @@ import { MessageList } from "./pec/message-list";
 import { MessageViewer } from "./pec/message-viewer";
 
 export function PecInboxPage() {
+  const isMobile = useMediaQuery("(max-width: 48em)");
+  const [mobileView, setMobileView] = useState<"folders" | "messages">("folders");
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
   const [notConfigured, setNotConfigured] = useState(false);
   const [folders, setFolders] = useState<PecFolder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [messages, setMessages] = useState<PecMessageSummary[]>([]);
-  const [selectedMessage, setSelectedMessage] = useState<PecMessage | null>(
-    null
-  );
+  const [selectedMessage, setSelectedMessage] = useState<PecMessage | null>(null);
   const [loadingFolders, setLoadingFolders] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(false);
@@ -83,11 +88,13 @@ export function PecInboxPage() {
 
   function handleFolderSelect(folderName: string) {
     setSelectedFolder(folderName);
+    if (isMobile) setMobileView("messages");
   }
 
   function handleMessageSelect(msg: PecMessageSummary) {
     setLoadingMessage(true);
     setEnvelopeMode(false);
+    if (isMobile) setMessageModalOpen(true);
     fetchPecMessage(msg.folder, msg.uid, false)
       .then(setSelectedMessage)
       .catch((err: unknown) =>
@@ -155,6 +162,79 @@ export function PecInboxPage() {
           Impostazioni &rarr; PEC
         </Text>.
       </Alert>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <Box style={{ height: "calc(100vh - 100px)", display: "flex", flexDirection: "column" }}>
+        <Title order={4} mb="sm">Casella PEC</Title>
+        <Box
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            border: "1px solid var(--mantine-color-gray-3)",
+            borderRadius: 8,
+          }}
+        >
+          {mobileView === "folders" ? (
+            <>
+              <Box p="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
+                <Text size="xs" fw={600} c="dimmed">CARTELLE</Text>
+              </Box>
+              <ScrollArea style={{ flex: 1 }}>
+                <Box pos="relative" mih={40}>
+                  <LoadingOverlay visible={loadingFolders} loaderProps={{ size: "xs" }} />
+                  <FolderList folders={folders} selected={selectedFolder} onSelect={handleFolderSelect} />
+                </Box>
+              </ScrollArea>
+            </>
+          ) : (
+            <>
+              <Box p="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
+                <Group gap="xs">
+                  <ActionIcon variant="subtle" color="gray" onClick={() => setMobileView("folders")}>
+                    <IconArrowLeft size={16} />
+                  </ActionIcon>
+                  <Text size="xs" fw={600} c="dimmed">{selectedFolder ?? "MESSAGGI"}</Text>
+                </Group>
+              </Box>
+              <ScrollArea style={{ flex: 1 }}>
+                <Box pos="relative" mih={40}>
+                  <LoadingOverlay visible={loadingMessages} loaderProps={{ size: "xs" }} />
+                  <MessageList
+                    messages={messages}
+                    selectedUid={selectedMessage?.uid ?? null}
+                    onSelect={handleMessageSelect}
+                    onToggleRead={handleToggleRead}
+                  />
+                </Box>
+              </ScrollArea>
+            </>
+          )}
+        </Box>
+
+        <Modal
+          opened={messageModalOpen}
+          onClose={() => { setMessageModalOpen(false); setSelectedMessage(null); }}
+          fullScreen
+          padding={0}
+          withCloseButton={false}
+        >
+          <Box pos="relative" style={{ height: "calc(100dvh - 60px)" }}>
+            <LoadingOverlay visible={loadingMessage} loaderProps={{ size: "sm" }} />
+            <MessageViewer
+              message={selectedMessage}
+              envelopeMode={envelopeMode}
+              onToggleRead={handleToggleRead}
+              onToggleEnvelope={handleToggleEnvelope}
+              onClose={() => { setMessageModalOpen(false); setSelectedMessage(null); }}
+            />
+          </Box>
+        </Modal>
+      </Box>
     );
   }
 

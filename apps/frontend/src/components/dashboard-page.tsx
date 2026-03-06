@@ -247,7 +247,7 @@ export function DashboardPage() {
   // Measure container width so GridLayout knows how wide to render
   const onResize = useCallback((entries: ResizeObserverEntry[]) => {
     const width = entries[0]?.contentRect.width;
-    if (width) setContainerWidth(width);
+    if (width) requestAnimationFrame(() => setContainerWidth(width));
   }, []);
 
   useEffect(() => {
@@ -266,7 +266,7 @@ export function DashboardPage() {
     if (h > 0) setChartHeight(h);
     const observer = new ResizeObserver((entries) => {
       const height = entries[0]?.contentRect.height;
-      if (height && height > 0) setChartHeight(height);
+      if (height && height > 0) requestAnimationFrame(() => setChartHeight(height));
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -506,7 +506,7 @@ export function DashboardPage() {
 
   return (
     <Stack gap="md">
-      <Title order={2}>Cruscotto</Title>
+      <Title order={2}>Dashboard</Title>
 
       {isMobile ? (
         // --- Mobile: plain vertical stack, no drag/resize ---

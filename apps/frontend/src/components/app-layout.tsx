@@ -59,7 +59,8 @@ const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] =
 export function AppLayout() {
   const router = useRouter();
   const [activePage, setActivePage] = useState<Page>("dashboard");
-  const [opened, { toggle, close }] = useDisclosure();
+  const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);
+  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const [dbVersion, setDbVersion] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,19 +76,20 @@ export function AppLayout() {
 
   function handleNavClick(page: Page) {
     setActivePage(page);
-    close();
+    closeMobile();
   }
 
   return (
     <AppShell
       header={{ height: 60 }}
-      navbar={{ width: 250, breakpoint: "sm", collapsed: { mobile: !opened } }}
+      navbar={{ width: 250, breakpoint: "sm", collapsed: { mobile: !mobileOpened, desktop: !desktopOpened } }}
       padding="md"
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Group gap="sm">
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
+            <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm" />
             <Title order={4}>AssoInCloud</Title>
             {dbVersion !== null && (
               <Badge variant="light" color="gray" size="sm">v{dbVersion}</Badge>
