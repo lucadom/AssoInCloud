@@ -22,6 +22,7 @@ import {
   Skeleton,
   NumberFormatter,
   Divider,
+  Badge,
 } from "@mantine/core";
 import {
   IconFileInvoice,
@@ -127,6 +128,48 @@ function getNextBirthday(members: Member[]): { member: Member; days: number; nex
   return ranked[0];
 }
 
+// --- Chart tooltip ---
+
+interface TooltipEntry { name: string; value: number; color?: string; fill?: string; }
+
+function ChartTooltipContent({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const nonZero = payload.filter((e) => e.value !== 0);
+  if (!nonZero.length) return null;
+  const total = nonZero.reduce((sum, e) => sum + e.value, 0);
+  const fmt = (v: number) => new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(v);
+  return (
+    <Card withBorder shadow="sm" padding="xs" radius="sm" style={{ minWidth: 180 }}>
+      <Text size="xs" fw={600} mb={4}>{label}</Text>
+      {nonZero.map((entry) => (
+        <Group key={entry.name} justify="space-between" gap="md" wrap="nowrap">
+          <Group gap={4} wrap="nowrap">
+            <div style={{ width: 10, height: 10, borderRadius: 2, flexShrink: 0, backgroundColor: entry.fill ?? entry.color }} />
+            <Text size="xs">{entry.name}</Text>
+          </Group>
+          <Text size="xs" fw={500}>{fmt(entry.value)}</Text>
+        </Group>
+      ))}
+      {nonZero.length > 1 && (
+        <>
+          <Divider my={4} />
+          <Group justify="space-between" wrap="nowrap">
+            <Text size="xs" fw={600}>Totale</Text>
+            <Text size="xs" fw={700}>{fmt(total)}</Text>
+          </Group>
+        </>
+      )}
+    </Card>
+  );
+}
+
+const CHART_SERIES: { name: string; color: string }[] = [
+  { name: "Contanti", color: "green" },
+  { name: "Bonifico", color: "blue" },
+  { name: "Addebito diretto", color: "orange" },
+  { name: "Non specificato", color: "gray" },
+];
+
 // --- Stat card ---
 
 interface StatCardProps {
@@ -173,6 +216,17 @@ export function DashboardPage() {
   const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [currentBreakpoint, setCurrentBreakpoint] = useState<string>("lg");
+  const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
+  const chartWrapperRef = useRef<HTMLDivElement>(null);
+  const [chartHeight, setChartHeight] = useState(220);
+
+  function toggleSeries(name: string) {
+    setHiddenSeries((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  }
 
   // Detect mobile breakpoint (below 768px → plain Stack, no grid overhead)
   useEffect(() => {
@@ -204,6 +258,19 @@ export function DashboardPage() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [onResize]);
+
+  useEffect(() => {
+    const el = chartWrapperRef.current;
+    if (!el) return;
+    const h = el.getBoundingClientRect().height;
+    if (h > 0) setChartHeight(h);
+    const observer = new ResizeObserver((entries) => {
+      const height = entries[0]?.contentRect.height;
+      if (height && height > 0) setChartHeight(height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Load saved layout from localStorage after mount (avoids SSR hydration mismatch)
   useEffect(() => {
@@ -253,7 +320,15 @@ export function DashboardPage() {
     const y = thisYear + Math.floor((thisMonth - offset) / 12);
     const inv = filterInvoicesByRange(invoices, startOfMonth(y, m), endOfMonth(y, m));
     const label = new Date(y, m, 1).toLocaleDateString("it-IT", { month: "short", year: "2-digit" });
-    return { mese: label, Totale: Math.round(sumTotal(inv) * 100) / 100 };
+    const byMethod = (method: string | null) =>
+      Math.round(sumTotal(inv.filter((i) => (i.supplier.paymentMethod ?? null) === method)) * 100) / 100;
+    return {
+      mese: label,
+      Contanti: byMethod("CASH"),
+      Bonifico: byMethod("BANK_TRANSFER"),
+      "Addebito diretto": byMethod("DIRECT_DEBIT"),
+      "Non specificato": byMethod(null),
+    };
   });
 
   const nextBirthday = getNextBirthday(members);
@@ -379,32 +454,50 @@ export function DashboardPage() {
       </StatCard>
     ),
     "grafico": (
-      <Card withBorder shadow="sm" radius="md" padding="lg" style={{ height: "100%", boxSizing: "border-box" }}>
+      <Card withBorder shadow="sm" radius="md" padding="lg" style={{ height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
         <Group justify="space-between" align="flex-start" mb="md" className="drag-handle" style={{ cursor: isMobile ? "default" : "grab" }}>
-          <Text size="sm" c="dimmed" fw={500}>Andamento fatture — ultimi 18 mesi</Text>
+          <Group gap="xs" align="center" wrap="wrap">
+            <Text size="sm" c="dimmed" fw={500}>Andamento fatture — ultimi 18 mesi</Text>
+            <Group gap={4} wrap="wrap">
+              {CHART_SERIES.map((s) => (
+                <Badge
+                  key={s.name}
+                  variant={hiddenSeries.has(s.name) ? "outline" : "light"}
+                  color={s.color}
+                  size="xs"
+                  style={{ cursor: "pointer", opacity: hiddenSeries.has(s.name) ? 0.4 : 1, userSelect: "none" }}
+                  onClick={(e) => { e.stopPropagation(); toggleSeries(s.name); }}
+                >
+                  {s.name}
+                </Badge>
+              ))}
+            </Group>
+          </Group>
           <ThemeIcon variant="light" color="blue" radius="md" size="lg">
             <IconFileInvoice size={20} />
           </ThemeIcon>
         </Group>
-        {loading ? (
-          <Skeleton height={220} />
-        ) : (
-          <BarChart
-            h={220}
-            data={chartData}
+        <div ref={chartWrapperRef} style={{ flex: 1, minHeight: 0 }}>
+          {loading ? (
+            <Skeleton height={chartHeight} />
+          ) : (
+            <BarChart
+              h={chartHeight}
+              data={chartData}
             dataKey="mese"
-            series={[{ name: "Totale", color: "blue" }]}
+            type="stacked"
+            series={CHART_SERIES.filter((s) => !hiddenSeries.has(s.name))}
             withTooltip
             tooltipProps={{
-              formatter: (value: number) =>
-                new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(value),
+              content: (props) => <ChartTooltipContent {...(props as { active?: boolean; payload?: TooltipEntry[]; label?: string })} />,
             }}
-            yAxisProps={{
-              tickFormatter: (v: number) =>
-                new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 0 }).format(v),
-            }}
-          />
-        )}
+              yAxisProps={{
+                tickFormatter: (v: number) =>
+                  new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 0 }).format(v),
+              }}
+            />
+          )}
+        </div>
       </Card>
     ),
   };
