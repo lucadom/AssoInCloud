@@ -1,5 +1,8 @@
 # AssoInCloud
 
+[![Tests](https://github.com/lucadom/AssoInCloud/actions/workflows/tests.yml/badge.svg)](https://github.com/lucadom/AssoInCloud/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/lucadom/AssoInCloud/branch/main/graph/badge.svg)](https://codecov.io/gh/lucadom/AssoInCloud)
+
 Applicazione web per la gestione di associazioni e ONLUS. Permette di gestire
 soci, fatture elettroniche (FatturaPA), fornitori, prodotti, listini prezzi e di
 consultare la casella PEC dell'associazione.
