@@ -489,7 +489,7 @@ export function DashboardPage() {
             series={CHART_SERIES.filter((s) => !hiddenSeries.has(s.name))}
             withTooltip
             tooltipProps={{
-              content: (props) => <ChartTooltipContent {...(props as { active?: boolean; payload?: TooltipEntry[]; label?: string })} />,
+              content: (props) => <ChartTooltipContent {...(props as unknown as { active?: boolean; payload?: TooltipEntry[]; label?: string })} />,
             }}
               yAxisProps={{
                 tickFormatter: (v: number) =>
