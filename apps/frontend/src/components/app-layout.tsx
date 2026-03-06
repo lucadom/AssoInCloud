@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppShell,
   Badge,
@@ -47,6 +47,8 @@ const DashboardPage = dynamic(
 
 type Page = "dashboard" | "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings" | "pec";
 
+const validPages: Page[] = ["dashboard", "invoices", "suppliers", "products", "price-lists", "members", "birthdays", "settings", "pec"];
+
 const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] = [
   { label: "Dashboard", value: "dashboard", icon: IconLayoutDashboard },
   { label: "Fatture", value: "invoices", icon: IconFileInvoice },
@@ -58,7 +60,17 @@ const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] =
 
 export function AppLayout() {
   const router = useRouter();
-  const [activePage, setActivePage] = useState<Page>("dashboard");
+  const searchParams = useSearchParams();
+  const [activePage, setActivePage] = useState<Page>(() => {
+    const param = searchParams.get("page") as Page;
+    return validPages.includes(param) ? param : "dashboard";
+  });
+
+  useEffect(() => {
+    const param = searchParams.get("page") as Page;
+    const page = validPages.includes(param) ? param : "dashboard";
+    setActivePage(page);
+  }, [searchParams]);
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);
   const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const [dbVersion, setDbVersion] = useState<string | null>(null);
@@ -95,6 +107,7 @@ export function AppLayout() {
 
   function handleNavClick(page: Page) {
     setActivePage(page);
+    router.push("/?page=" + page);
     closeMobile();
   }
 

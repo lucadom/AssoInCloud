@@ -29,12 +29,14 @@ vi.mock("@/lib/api/auth", () => ({
 }));
 
 const mockPush = vi.fn();
+let currentSearchParams = new URLSearchParams();
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
     replace: vi.fn(),
   }),
+  useSearchParams: () => currentSearchParams,
 }));
 
 import { logout } from "@/lib/api/auth";
@@ -42,6 +44,7 @@ import { logout } from "@/lib/api/auth";
 describe("AppLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentSearchParams = new URLSearchParams();
   });
 
   it("should render navigation items", () => {
@@ -87,6 +90,7 @@ describe("AppLayout", () => {
     );
     fireEvent.click(screen.getByText("Fatture"));
     expect(screen.getByTestId("invoices-page")).toBeInTheDocument();
+    expect(mockPush).toHaveBeenCalledWith("/?page=invoices");
   });
 
   it("should switch to SuppliersPage when clicking Fornitori", () => {
@@ -132,6 +136,38 @@ describe("AppLayout", () => {
     expect(screen.getByTestId("suppliers-page")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Fatture"));
     expect(screen.getByTestId("invoices-page")).toBeInTheDocument();
+  });
+
+  it("should load page from URL search param on mount", async () => {
+    currentSearchParams = new URLSearchParams("page=invoices");
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    expect(screen.getByTestId("invoices-page")).toBeInTheDocument();
+  });
+
+  it("should default to dashboard when URL has unknown page param", async () => {
+    currentSearchParams = new URLSearchParams("page=unknown");
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+    });
+  });
+
+  it("should call router.push with correct URL on navigation", () => {
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByText("Fornitori"));
+    expect(mockPush).toHaveBeenCalledWith("/?page=suppliers");
   });
 
   it("should call logout and redirect on logout click", async () => {
