@@ -8,7 +8,7 @@ Guida completa per configurare l'ambiente di sviluppo locale.
 
 | Strumento | Versione minima |
 |-----------|----------------|
-| Java JDK | 17 |
+| Java JDK | 25 |
 | Maven | 3.9+ (oppure usa il wrapper `./mvnw` incluso) |
 | Node.js | 20 |
 | npm | 10 |
@@ -21,7 +21,7 @@ Guida completa per configurare l'ambiente di sviluppo locale.
 ```
 assoincloud/
 ├── apps/
-│   ├── backend/          # Java 17, Spring Boot 4, Spring Data JPA, Flyway, SQLite
+│   ├── backend/          # Java 25, Spring Boot 4, Spring Data JPA, Flyway, SQLite
 │   └── frontend/         # Next.js 16, React 19, Mantine 8, TypeScript 5
 ├── data/                 # Directory del database SQLite (git-ignored)
 ├── docker/               # File Docker (Dockerfile dev, nginx config, entrypoint)
@@ -124,7 +124,7 @@ docker compose -f docker-compose.dev.yml up --build
 
 | Servizio | Immagine | Porta | Descrizione |
 |----------|----------|-------|--------------|
-| `backend` | JDK 17 + Maven | (interna) | `spring-boot:run` con devtools |
+| `backend` | JDK 25 + Maven | (interna) | `spring-boot:run` con devtools |
 | `frontend` | Node 20 | **80** | `next dev` con HMR; proxy `/api/*` → backend |
 
 L'applicazione è raggiungibile su **http://localhost** (porta 80).

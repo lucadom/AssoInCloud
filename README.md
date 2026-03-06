@@ -23,7 +23,7 @@ consultare la casella PEC dell'associazione.
 
 | Componente | Tecnologia |
 |------------|-----------|
-| Backend | Java 17, Spring Boot 4, Spring Data JPA, Flyway, SQLite |
+| Backend | Java 25, Spring Boot 4, Spring Data JPA, Flyway, SQLite |
 | Frontend | Next.js 16, React 19, Mantine 8, TypeScript 5 |
 | Database | SQLite (file-based) |
 
@@ -194,7 +194,7 @@ assoincloud/
 
 1. **backend-build** — Compila il backend Spring Boot con Maven, produce `backend.jar`
 2. **frontend-build** — Installa le dipendenze npm e compila Next.js come export statico (`out/`)
-3. **runtime** — Immagine finale leggera (JRE 17) con `backend.jar` e il frontend statico in `/app/static/`
+3. **runtime** — Immagine finale leggera (JRE 25) con `backend.jar` e il frontend statico in `/app/static/`
 
 ---
 

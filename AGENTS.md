@@ -11,7 +11,7 @@ AssoInCloud is an Italian association management application.
 
 | Layer | Tech | Location |
 |-------|------|----------|
-| Backend | Java 17, Spring Boot 4, Spring Data JPA, Flyway, SQLite | `apps/backend/` |
+| Backend | Java 25, Spring Boot 4, Spring Data JPA, Flyway, SQLite | `apps/backend/` |
 | Frontend | Next.js 16, React 19, Mantine 8, TypeScript 5 | `apps/frontend/` |
 | Database | SQLite (file `data/assoincloud.db`, in-memory for tests) | — |
 
