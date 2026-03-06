@@ -77,6 +77,8 @@ describe("ProductsPage", () => {
   });
 
   it("should search and display results", async () => {
+    // Use real timers for this test so waitFor can poll the 400ms debounce naturally
+    vi.useRealTimers();
     mockSearch.mockResolvedValue(results);
     render(
       <TestWrapper>
@@ -84,16 +86,11 @@ describe("ProductsPage", () => {
       </TestWrapper>
     );
     const input = screen.getByPlaceholderText(/Cerca prodotti/);
-    await act(async () => {
-      fireEvent.change(input, { target: { value: "caffè" } });
-      vi.advanceTimersByTime(500);
-    });
+    fireEvent.change(input, { target: { value: "caffè" } });
     await waitFor(() => {
       expect(mockSearch).toHaveBeenCalledWith("caffè");
-    });
-    await waitFor(() => {
       expect(screen.getByText("Caffè espresso")).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
     expect(screen.getByText("Tè verde")).toBeInTheDocument();
     expect(screen.getByText("Alfa SRL")).toBeInTheDocument();
     expect(screen.getByText("Beta SpA")).toBeInTheDocument();

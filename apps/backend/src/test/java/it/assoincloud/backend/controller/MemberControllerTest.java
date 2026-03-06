@@ -367,5 +367,18 @@ class MemberControllerTest {
             .andExpect(jsonPath("$[?(@.lastName == 'Neri')].fiscalCode", hasSize(1)))
             .andExpect(jsonPath("$[?(@.lastName == 'Neri')].fiscalCode", hasItem("NRANNA85E60D612C")));
     }
+
+    @Test
+    void shouldSkipCsvRowsWithTooFewColumns() throws Exception {
+        String csvContent = "Cognome;Nome;Codice fiscale;Data di nascita;Nato a;Residenza;Citta;Telefono;Data accettazione\n" +
+                "Rossi;Marco\n" +  // only 2 columns → skipped (cols.length < 9)
+                "Bianchi;Luigi;BNCLGU85B15F205X;15/02/1985;Milano;Via Bianchi 3;Milano;3334444444;01/02/2025\n";
+
+        MockMultipartFile file = new MockMultipartFile("file", "members.csv", "text/csv", csvContent.getBytes());
+        mockMvc.perform(multipart("/api/members/import-csv").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imported", is(1)))
+                .andExpect(jsonPath("$.skipped", is(1)));
+    }
 }
 

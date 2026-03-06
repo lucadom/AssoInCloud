@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import dayjs from "dayjs";
 import { MemberFormModal } from "./member-form-modal";
 import { TestWrapper } from "@/test-utils";
@@ -6,7 +6,8 @@ import type { Member } from "@/types";
 
 describe("MemberFormModal", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    // Only fake Date so waitFor still works with real setTimeout/setInterval
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 1, 13, 12, 0, 0));
   });
 
@@ -14,7 +15,7 @@ describe("MemberFormModal", () => {
     vi.useRealTimers();
   });
 
-  it("shows today's date by default for new member", () => {
+  it("shows today's date by default for new member", async () => {
     render(
       <MemberFormModal
         opened
@@ -25,11 +26,14 @@ describe("MemberFormModal", () => {
       { wrapper: TestWrapper }
     );
 
-    const input = screen.getByLabelText("Data accettazione socio") as HTMLInputElement;
-    expect(input.value).toBe(dayjs(new Date(2026, 1, 13, 12, 0, 0)).format("DD/MM/YYYY"));
+    // DatePickerInput renders as a button; check its text content
+    const button = screen.getByLabelText("Data accettazione socio");
+    await waitFor(() => {
+      expect(button).toHaveTextContent(dayjs(new Date(2026, 1, 13, 12, 0, 0)).format("DD/MM/YYYY"));
+    });
   });
 
-  it("uses member date when editing", () => {
+  it("uses member date when editing", async () => {
     const member: Member = {
       id: "member-1",
       lastName: "Rossi",
@@ -53,7 +57,9 @@ describe("MemberFormModal", () => {
       { wrapper: TestWrapper }
     );
 
-    const input = screen.getByLabelText("Data accettazione socio") as HTMLInputElement;
-    expect(input.value).toBe("02/01/2024");
+    const button = screen.getByLabelText("Data accettazione socio");
+    await waitFor(() => {
+      expect(button).toHaveTextContent("02/01/2024");
+    });
   });
 });

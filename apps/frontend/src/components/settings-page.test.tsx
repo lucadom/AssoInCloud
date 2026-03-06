@@ -151,6 +151,9 @@ describe("SettingsPage", () => {
       </TestWrapper>
     );
 
+    // Switch to the Backup tab so its panel becomes accessible
+    fireEvent.click(screen.getByRole("tab", { name: /backup/i }));
+
     // Select file with version 2
     const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
     const file = new File(["SQLite format 3\x00"], "old_backup.db", { type: "application/octet-stream" });
@@ -177,6 +180,9 @@ describe("SettingsPage", () => {
       </TestWrapper>
     );
 
+    // Switch to the Backup tab so its panel becomes accessible
+    fireEvent.click(screen.getByRole("tab", { name: /backup/i }));
+
     // Select file with version 3
     const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
     const file = new File(["SQLite format 3\x00"], "backup.db", { type: "application/octet-stream" });
@@ -202,6 +208,9 @@ describe("SettingsPage", () => {
         <SettingsPage dbVersion="3" />
       </TestWrapper>
     );
+
+    // Switch to the Backup tab
+    fireEvent.click(screen.getByRole("tab", { name: /backup/i }));
 
     const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
     const file = new File(["SQLite format 3\x00"], "backup.db", { type: "application/octet-stream" });
@@ -235,6 +244,9 @@ describe("SettingsPage", () => {
         <SettingsPage dbVersion="3" />
       </TestWrapper>
     );
+
+    // Switch to the Backup tab
+    fireEvent.click(screen.getByRole("tab", { name: /backup/i }));
 
     const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
     const file = new File(["SQLite format 3\x00"], "backup.db", { type: "application/octet-stream" });

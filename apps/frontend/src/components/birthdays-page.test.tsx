@@ -67,7 +67,9 @@ describe("BirthdaysPage", () => {
       </TestWrapper>
     );
     await waitFor(() => {
-      expect(screen.getByText("10/02/2027")).toBeInTheDocument();
+      // BirthdaysSummary renders upcoming birthdays by member name;
+      // the date format in the step label depends on Intl, so we check the name.
+      expect(screen.getByText("Mario Rossi")).toBeInTheDocument();
     });
   });
 

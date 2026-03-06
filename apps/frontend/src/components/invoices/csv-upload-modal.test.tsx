@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CsvUploadModal } from "./csv-upload-modal";
 import { TestWrapper } from "@/test-utils";
 
@@ -71,7 +71,7 @@ describe("CsvUploadModal", () => {
     expect(button).toHaveAttribute("data-loading");
   });
 
-  it("should show the expected CSV format in the popover", () => {
+  it("should show the expected CSV format in the popover", async () => {
     render(
       <TestWrapper>
         <CsvUploadModal opened={true} onClose={onClose} onUpload={onUpload} />
@@ -79,10 +79,12 @@ describe("CsvUploadModal", () => {
     );
 
     fireEvent.click(screen.getByLabelText("Formato CSV fatture"));
-    expect(
-      screen.getByText(
-        "Tipo documento;Numero fattura;Data;Partita IVA;Fornitore;Imponibile;Imposta;Numero SDI;Fattura visualizzata"
-      )
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Tipo documento;Numero fattura;Data;Partita IVA;Fornitore;Imponibile;Imposta;Numero SDI;Fattura visualizzata"
+        )
+      ).toBeInTheDocument();
+    });
   });
 });

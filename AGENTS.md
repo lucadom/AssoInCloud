@@ -109,6 +109,11 @@ user (e.g. `"Errore durante l'elaborazione del CSV"`).
 - Refactor → run existing tests to confirm nothing is broken; add tests if
   coverage gaps are discovered.
 
+**Coverage requirement:** after every change, **all tests in both backend and
+frontend must pass** and the overall line/branch coverage in each project must
+remain **≥ 70 %**. A change that causes coverage to drop below this threshold
+must not be merged until coverage is restored.
+
 ### 3.2 Backend testing
 
 | Concern | Style | Example |
@@ -150,11 +155,31 @@ cd apps/backend
 ./mvnw test -Dtest=InvoiceServiceCsvImportTest   # single class
 ```
 
+**Running tests with coverage** (JaCoCo — enforces the 70 % minimum):
+```bash
+cd apps/backend
+./mvnw verify          # runs tests + JaCoCo report; fails if coverage < 70 %
+```
+The HTML report is generated at `target/site/jacoco/index.html`.
+
 ### 3.3 Frontend testing
 
-When frontend tests are added, use Vitest or the test runner configured in
-`package.json`. Test files go next to the source file or under a `__tests__`
-directory.
+Use Vitest (configured in `vitest.config.ts`). Test files go next to the
+source file or under a `__tests__` directory.
+
+**Running tests:**
+```bash
+cd apps/frontend
+npm test              # all tests (watch mode)
+npm run test:run      # single pass (CI mode)
+```
+
+**Running tests with coverage** (enforces the 70 % minimum):
+```bash
+cd apps/frontend
+npm run coverage      # runs Vitest with --coverage; fails if coverage < 70 %
+```
+The HTML report is generated at `coverage/index.html`.
 
 ### 3.4 Test data
 
@@ -325,10 +350,13 @@ Controller  →  Service  →  External system (IMAP, HTTP, …)
 3. **Implement bottom-up**: migration → entity → repository → service → test →
    controller → DTO → frontend types → API client → UI component.
 4. **Write tests first or alongside** — never defer testing to later.
-5. **Run tests** after every meaningful change:
+5. **Run all tests and verify coverage** after every meaningful change:
    ```bash
-   cd apps/backend && ./mvnw test
+   cd apps/backend && ./mvnw verify          # tests + JaCoCo coverage ≥ 70 %
+   cd apps/frontend && npm run coverage      # tests + Vitest coverage ≥ 70 %
    ```
+   Both commands must exit successfully (zero) before the change is
+   considered done.
 6. **Verify the frontend compiles**:
    ```bash
    cd apps/frontend && npm run build
@@ -344,6 +372,8 @@ Controller  →  Service  →  External system (IMAP, HTTP, …)
 
 - Each logical change should be self-contained and tested.
 - Do not leave the codebase in a broken state (tests must pass).
+- **All tests** (backend and frontend) must **pass** and coverage must remain
+  **≥ 70 %** in both projects before a change is committed.
 - Documentation must be up to date before the change is considered done.
 
 ---
@@ -360,6 +390,9 @@ Controller  →  Service  →  External system (IMAP, HTTP, …)
 - **Don't write English-language UI labels** — all user-facing text is Italian.
 - **Don't write Italian code identifiers** — all code is in English.
 - **Don't skip tests** — every change must have corresponding test coverage.
+- **Don't let coverage drop below 70 %** — both backend (`./mvnw verify`) and
+  frontend (`npm run coverage`) must report ≥ 70 % line/branch coverage after
+  every change.
 - **Don't use `ddl-auto=update`** — all schema changes go through Flyway.
 - **Don't hardcode configuration** — new external integrations (IMAP, SMTP, …)
   must read credentials exclusively from `@Value`-injected env vars; never embed
@@ -383,7 +416,10 @@ When adding a new **persisted** feature (new entity + DB table):
 - [ ] TypeScript type in `src/types/`
 - [ ] API client function in `src/lib/api/`
 - [ ] UI component(s) with Italian labels
-- [ ] Run all tests and frontend build to confirm nothing is broken
+- [ ] Run all tests and verify coverage ≥ 70 % in both projects:
+      `cd apps/backend && ./mvnw verify`
+      `cd apps/frontend && npm run coverage`
+- [ ] Verify frontend build: `cd apps/frontend && npm run build`
 - [ ] Update `AGENTS.md` §1 (feature table), §2.3 (terminology), §5.3 (API list)
 - [ ] Update env var tables in `DEV.md` and `README.md`
 
@@ -398,6 +434,9 @@ When adding a new **stateless** feature (external integration, no DB):
 - [ ] TypeScript type in `src/types/`
 - [ ] API client function in `src/lib/api/` (handle 404 → user-friendly `notConfigured` flag)
 - [ ] UI component(s) with Italian labels; show an `Alert` when `notConfigured`
-- [ ] Run all tests and frontend build to confirm nothing is broken
+- [ ] Run all tests and verify coverage ≥ 70 % in both projects:
+      `cd apps/backend && ./mvnw verify`
+      `cd apps/frontend && npm run coverage`
+- [ ] Verify frontend build: `cd apps/frontend && npm run build`
 - [ ] Update `AGENTS.md` §1, §2.3, §5.3 (stateless section)
 - [ ] Update env var tables in `DEV.md` and `README.md`

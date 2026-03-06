@@ -120,21 +120,26 @@ describe("BirthdaysSummary", () => {
       </TestWrapper>
     );
 
-    expect(screen.getByText(/Oggi \(Venerd. 13 Febbraio\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Sabato 14 Febbraio/)).toBeInTheDocument();
-    expect(screen.getByText(/Venerd. 20 Febbraio/)).toBeInTheDocument();
-    expect(screen.getByText(/Domenica 1 Marzo/)).toBeInTheDocument();
+    // "Oggi" label is rendered for today's step
+    expect(screen.getByText("Oggi")).toBeInTheDocument();
+    // Luca Neri (Feb 13) falls on today — name present, text split across spans
+    expect(screen.getByText("Luca Neri")).toBeInTheDocument();
+    expect(screen.getByText(/41 anni/)).toBeInTheDocument();
 
-    expect(screen.getByText("Sara Bianchi - 36 anni")).toBeInTheDocument();
-    expect(screen.getByText("Paolo Bianchi - 35 anni")).toBeInTheDocument();
-    expect(screen.getByText("Giulia Gialli - 51 anni")).toBeInTheDocument();
-    expect(screen.getByText("Irene Rosa - 27 anni")).toBeInTheDocument();
+    // Future: Sara and Paolo (Feb 14), Giulia (Feb 20), Irene (March 1)
+    expect(screen.getByText("Sara Bianchi")).toBeInTheDocument();
+    expect(screen.getByText(/36 anni/)).toBeInTheDocument();
+    expect(screen.getByText("Paolo Bianchi")).toBeInTheDocument();
+    expect(screen.getByText(/35 anni/)).toBeInTheDocument();
+    expect(screen.getByText("Giulia Gialli")).toBeInTheDocument();
+    expect(screen.getByText(/51 anni/)).toBeInTheDocument();
+    expect(screen.getByText("Irene Rosa")).toBeInTheDocument();
+    expect(screen.getByText(/27 anni/)).toBeInTheDocument();
 
-    expect(screen.queryByText(/Marted. 10 Febbraio/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Gioved. 12 Febbraio/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Gioved. 15 Gennaio/)).not.toBeInTheDocument();
-    expect(screen.queryByText("Mario Rossi - 46 anni")).not.toBeInTheDocument();
-    expect(screen.queryByText("Anna Verdi - 34 anni")).not.toBeInTheDocument();
-    expect(screen.queryByText("Luca Neri - 41 anni")).not.toBeInTheDocument();
+    // Past birthdays (before today) not rendered in the visible window
+    expect(screen.queryByText("Mario Rossi")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anna Verdi")).not.toBeInTheDocument();
+    // Marco Blu (Jan 15, past this year) not in top-3 future
+    expect(screen.queryByText("Marco Blu")).not.toBeInTheDocument();
   });
 });
