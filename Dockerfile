@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Build the Spring Boot backend
 # ---------------------------------------------------------------------------
-FROM eclipse-temurin:17-jdk-jammy AS backend-build
+FROM eclipse-temurin:25-jdk-jammy AS backend-build
 
 WORKDIR /build
 
@@ -48,7 +48,7 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 # Stage 3: Production runtime — Spring Boot only
 # ---------------------------------------------------------------------------
-FROM eclipse-temurin:17-jre-jammy AS runtime
+FROM eclipse-temurin:25-jre-jammy AS runtime
 
 WORKDIR /app
 

@@ -98,6 +98,8 @@ public class InvoiceController {
         log.info("Invoice XML/P7M upload complete: imported={}, updated={}, skipped={}", totalImported, totalUpdated, totalSkipped);
         return new ImportResultDto(totalImported, totalUpdated, totalSkipped);
     }
+
+    @GetMapping("/{invoiceId}/attachments/{attachmentId}")
     public ResponseEntity<byte[]> downloadAttachment(
             @PathVariable String invoiceId,
             @PathVariable String attachmentId) {

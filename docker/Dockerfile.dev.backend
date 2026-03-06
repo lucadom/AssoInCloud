@@ -3,7 +3,7 @@
 # Runs Spring Boot with devtools for automatic restart on code changes.
 # Source code is mounted at runtime — no rebuild needed.
 # =============================================================================
-FROM eclipse-temurin:17-jdk-jammy
+FROM eclipse-temurin:25-jdk-jammy
 
 # Install curl for healthcheck
 RUN apt-get update && apt-get install -y --no-install-recommends curl && \
