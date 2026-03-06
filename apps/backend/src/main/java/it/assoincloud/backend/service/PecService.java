@@ -10,6 +10,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import it.assoincloud.backend.dto.PecAttachmentDto;
@@ -31,6 +33,7 @@ import jakarta.mail.internet.MimeMessage;
 @Service
 public class PecService {
 
+    private static final Logger log = LoggerFactory.getLogger(PecService.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
     private final AppSettingService appSettingService;
@@ -45,6 +48,7 @@ public class PecService {
     }
 
     public List<PecFolderDto> listFolders() {
+        log.info("Listing PEC folders");
         try (Store store = openStore()) {
             Folder[] folders = store.getDefaultFolder().list("*");
             List<PecFolderDto> result = new ArrayList<>();
@@ -57,17 +61,21 @@ public class PecService {
                         folder.close(false);
                         result.add(new PecFolderDto(folder.getName(), folder.getFullName(), total, unread));
                     } catch (MessagingException e) {
+                        log.warn("Could not open folder '{}': {}", folder.getFullName(), e.getMessage());
                         result.add(new PecFolderDto(folder.getName(), folder.getFullName(), 0, 0));
                     }
                 }
             }
+            log.info("Found {} PEC folders", result.size());
             return result;
         } catch (MessagingException e) {
+            log.error("Error connecting to PEC mailbox: {}", e.getMessage(), e);
             throw new RuntimeException("Errore nella connessione alla casella PEC: " + e.getMessage(), e);
         }
     }
 
     public List<PecMessageSummaryDto> listMessages(String folderName, int page, int size) {
+        log.info("Listing PEC messages in folder '{}', page={}, size={}", folderName, page, size);
         try (Store store = openStore()) {
             Folder folder = store.getFolder(folderName);
             folder.open(Folder.READ_ONLY);
@@ -89,16 +97,19 @@ public class PecService {
                     Message msg = messages[i];
                     result.add(toSummaryDto(uidFolder.getUID(msg), folderName, msg));
                 }
+                log.info("Returned {} messages from folder '{}'", result.size(), folderName);
                 return result;
             } finally {
                 folder.close(false);
             }
         } catch (MessagingException e) {
+            log.error("Error reading PEC messages from folder '{}': {}", folderName, e.getMessage(), e);
             throw new RuntimeException("Errore nella lettura dei messaggi: " + e.getMessage(), e);
         }
     }
 
     public PecMessageDto getMessage(String folderName, long uid, boolean envelope) {
+        log.info("Fetching PEC message uid={} from folder '{}'", uid, folderName);
         try (Store store = openStore()) {
             Folder folder = store.getFolder(folderName);
             folder.open(Folder.READ_ONLY);
@@ -143,11 +154,13 @@ public class PecService {
                 folder.close(false);
             }
         } catch (MessagingException | IOException e) {
+            log.error("Error reading PEC message uid={} from folder '{}': {}", uid, folderName, e.getMessage(), e);
             throw new RuntimeException("Errore nella lettura del messaggio: " + e.getMessage(), e);
         }
     }
 
     public void setReadStatus(String folderName, long uid, boolean read) {
+        log.info("Setting read status uid={} in folder '{}' to read={}", uid, folderName, read);
         try (Store store = openStore()) {
             Folder folder = store.getFolder(folderName);
             folder.open(Folder.READ_WRITE);
@@ -162,6 +175,7 @@ public class PecService {
                 folder.close(false);
             }
         } catch (MessagingException e) {
+            log.error("Error updating read status uid={} in folder '{}': {}", uid, folderName, e.getMessage(), e);
             throw new RuntimeException("Errore nell'aggiornamento dello stato del messaggio: " + e.getMessage(), e);
         }
     }

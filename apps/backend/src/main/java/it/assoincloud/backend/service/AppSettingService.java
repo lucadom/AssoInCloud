@@ -2,6 +2,8 @@ package it.assoincloud.backend.service;
 
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +14,8 @@ import it.assoincloud.backend.repository.AppSettingRepository;
 @Service
 @Transactional
 public class AppSettingService {
+
+    private static final Logger log = LoggerFactory.getLogger(AppSettingService.class);
 
     private static final String PEC_HOST = "pec.host";
     private static final String PEC_PORT = "pec.port";
@@ -66,6 +70,7 @@ public class AppSettingService {
      * Saves PEC configuration. If the incoming password is blank, the existing one is preserved.
      */
     public void savePecSettings(PecSettingsDto dto) {
+        log.info("Saving PEC settings for host: {}, port: {}, user: {}", dto.host(), dto.port(), dto.username());
         setValue(PEC_HOST, dto.host() == null ? "" : dto.host().trim());
         setValue(PEC_PORT, String.valueOf(dto.port() > 0 ? dto.port() : 993));
         setValue(PEC_USERNAME, dto.username() == null ? "" : dto.username().trim());

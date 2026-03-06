@@ -378,7 +378,63 @@ Controller  →  Service  →  External system (IMAP, HTTP, …)
 
 ---
 
-## 8. Common Pitfalls to Avoid
+## 8. Logging
+
+### 8.1 Backend (SLF4J / Logback)
+
+Every service class must declare a logger:
+
+```java
+private static final Logger log = LoggerFactory.getLogger(MyService.class);
+```
+
+Level conventions:
+
+| Level | When to use |
+|-------|-------------|
+| `log.info(...)` | Main operations: every CRUD mutation, import/export start and completion, backup/restore |
+| `log.warn(...)` | Business-rule rejections (duplicate key, conflict, not configured) |
+| `log.error(...)` | Caught exceptions that result in an error response; always include the exception as the last argument |
+| `log.debug(...)` | Read-only lookups and low-level detail useful only for troubleshooting |
+
+Controllers only add logs for:
+- Aggregated multi-file uploads (total counts logged at INFO).
+- Caught exceptions that produce HTTP 4xx/5xx responses (`warn`/`error`).
+
+Services log the actual business operations; controllers must not duplicate them.
+
+### 8.2 Frontend (`src/lib/logger.ts`)
+
+Use the shared `logger` utility imported from `@/lib/logger` (or via the
+relative path `../logger` inside `src/lib/api/`):
+
+```typescript
+import { logger } from "../logger";
+```
+
+Level conventions:
+
+| Level | When to use |
+|-------|-------------|
+| `logger.info(...)` | Every API call that fetches, creates, updates, or deletes data |
+| `logger.warn(...)` | Recoverable situations (PEC not configured, 404 "not found") |
+| `logger.error(...)` | API call failed (`!res.ok`); include HTTP status and backend error message |
+| `logger.debug(...)` | Verbose detail needed only during development |
+
+`info` and `debug` are silenced in production (`NODE_ENV === "production"`).
+
+### 8.3 Maintenance rules
+
+- **Keep logs up to date** — when you rename, refactor, or remove a feature,
+  update or remove the corresponding log statements.
+- **Add logs for new features** — every new service method and API function that
+  performs data mutation or retrieval must include appropriate log calls.
+- **Never log sensitive data** — passwords, full auth tokens, and personal data
+  (e.g. fiscal codes in plain text) must not appear in log messages.
+
+---
+
+## 9. Common Pitfalls to Avoid
 
 - **Don't add Lombok** — the project deliberately avoids it.
 - **Don't use wildcard imports** in Java.
@@ -399,6 +455,10 @@ Controller  →  Service  →  External system (IMAP, HTTP, …)
   host names, usernames, or passwords in source code.
 - **Don't skip documentation** — `AGENTS.md`, `DEV.md`, and `README.md` must
   reflect the current state of the project after every change.
+- **Don't skip logging** — every new service method and API client function that
+  performs data retrieval or mutation must include `log.info` / `logger.info`
+  calls; errors must use `log.error` / `logger.error`. Keep existing logs
+  consistent when refactoring.
 
 ---
 
@@ -413,8 +473,9 @@ When adding a new **persisted** feature (new entity + DB table):
 - [ ] DTO record(s) in `dto/` with `from()` factory
 - [ ] REST controller in `controller/`
 - [ ] Integration and/or unit tests
+- [ ] Add `log.info` / `log.warn` / `log.error` calls in the new service methods
 - [ ] TypeScript type in `src/types/`
-- [ ] API client function in `src/lib/api/`
+- [ ] API client function in `src/lib/api/` with `logger` calls for each operation
 - [ ] UI component(s) with Italian labels
 - [ ] Run all tests and verify coverage ≥ 70 % in both projects:
       `cd apps/backend && ./mvnw verify`
@@ -430,9 +491,10 @@ When adding a new **stateless** feature (external integration, no DB):
 - [ ] REST controller returning HTTP 404 with Italian message when not configured
 - [ ] Unit tests for `isConfigured()` and any parsing/transformation logic
 - [ ] Controller integration tests verifying the "not configured" 404 path
+- [ ] Add `log.info` / `log.warn` / `log.error` calls in the new service methods
 - [ ] New env vars documented in `application.yaml`, `docker-compose.yml`, `docker-compose.dev.yml`
 - [ ] TypeScript type in `src/types/`
-- [ ] API client function in `src/lib/api/` (handle 404 → user-friendly `notConfigured` flag)
+- [ ] API client function in `src/lib/api/` (handle 404 → user-friendly `notConfigured` flag) with `logger` calls
 - [ ] UI component(s) with Italian labels; show an `Alert` when `notConfigured`
 - [ ] Run all tests and verify coverage ≥ 70 % in both projects:
       `cd apps/backend && ./mvnw verify`

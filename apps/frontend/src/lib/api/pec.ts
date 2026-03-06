@@ -1,6 +1,7 @@
 import type { Invoice, PecFolder, PecMessage, PecMessageSummary } from "@/types";
 import { getToken } from "./auth";
 import { authFetch } from "./auth-fetch";
+import { logger } from "../logger";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
 
@@ -14,8 +15,10 @@ export { isPecNotConfiguredError };
 
 /** Fetch all available IMAP folders for the configured PEC account. */
 export async function fetchPecFolders(): Promise<PecFolder[]> {
+  logger.info("Fetching PEC folders");
   const res = await authFetch("/pec/folders");
   if (res.status === 404) {
+    logger.warn("PEC access not configured");
     const body = await res.json().catch(() => null);
     const err = new Error(
       body?.error ?? "Accesso alla casella PEC non configurato"
@@ -24,6 +27,7 @@ export async function fetchPecFolders(): Promise<PecFolder[]> {
     throw err;
   }
   if (!res.ok) {
+    logger.error("Failed to fetch PEC folders", res.status);
     throw new Error("Errore nel caricamento delle cartelle PEC");
   }
   return res.json();
@@ -35,6 +39,7 @@ export async function fetchPecMessages(
   page = 0,
   size = 25
 ): Promise<PecMessageSummary[]> {
+  logger.info("Fetching PEC messages", { folder, page, size });
   const params = new URLSearchParams({
     folder,
     page: String(page),
@@ -42,6 +47,7 @@ export async function fetchPecMessages(
   });
   const res = await authFetch(`/pec/messages?${params}`);
   if (!res.ok) {
+    logger.error("Failed to fetch PEC messages", { folder, status: res.status });
     throw new Error("Errore nel caricamento dei messaggi");
   }
   return res.json();
@@ -53,10 +59,12 @@ export async function fetchPecMessage(
   uid: number,
   envelope = false
 ): Promise<PecMessage> {
+  logger.info("Fetching PEC message", { folder, uid });
   const params = new URLSearchParams({ folder });
   if (envelope) params.set("envelope", "true");
   const res = await authFetch(`/pec/messages/${uid}?${params}`);
   if (!res.ok) {
+    logger.error("Failed to fetch PEC message", { folder, uid, status: res.status });
     throw new Error("Errore nel caricamento del messaggio");
   }
   return res.json();
@@ -68,6 +76,7 @@ export async function setPecReadStatus(
   uid: number,
   read: boolean
 ): Promise<void> {
+  logger.info("Setting PEC message read status", { folder, uid, read });
   const res = await authFetch(
     `/pec/messages/${uid}?folder=${encodeURIComponent(folder)}`,
     {
@@ -78,6 +87,7 @@ export async function setPecReadStatus(
   );
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    logger.error("Failed to set PEC message read status", { folder, uid, status: res.status });
     throw new Error(body?.error ?? "Errore nell'aggiornamento dello stato");
   }
 }
@@ -138,6 +148,7 @@ export async function importPecAttachmentAsInvoice(
   partIndex: number,
   envelope = false
 ): Promise<{ imported: number; updated: number; skipped: number }> {
+  logger.info("Importing PEC attachment as invoice", { folder, uid, partIndex });
   const params = new URLSearchParams({ folder });
   if (envelope) params.set("envelope", "true");
   const res = await authFetch(

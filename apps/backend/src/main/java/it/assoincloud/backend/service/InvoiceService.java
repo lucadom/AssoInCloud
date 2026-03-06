@@ -10,6 +10,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +29,7 @@ import it.assoincloud.backend.repository.SupplierRepository;
 @Transactional
 public class InvoiceService {
 
+    private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
     private static final DateTimeFormatter CSV_DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final InvoiceRepository invoiceRepository;
@@ -48,34 +51,42 @@ public class InvoiceService {
 
     @Transactional(readOnly = true)
     public List<Invoice> findAll() {
+        log.info("Fetching all invoices");
         return invoiceRepository.findAll();
     }
 
     @Transactional(readOnly = true)
     public Invoice findById(String id) {
+        log.debug("Fetching invoice by id: {}", id);
         return invoiceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Invoice not found: " + id));
     }
 
     public Invoice create(InvoiceFormData data) {
+        log.info("Creating invoice: number={}, supplier={}", data.invoiceNumber(), data.supplierName());
         Invoice inv = new Invoice();
         applyFormData(inv, data);
-        return invoiceRepository.save(inv);
+        Invoice saved = invoiceRepository.save(inv);
+        log.info("Invoice created with id: {}", saved.getId());
+        return saved;
     }
 
     public Invoice update(String id, InvoiceFormData data) {
+        log.info("Updating invoice id: {}", id);
         Invoice inv = findById(id);
         applyFormData(inv, data);
         return invoiceRepository.save(inv);
     }
 
     public void delete(String id) {
+        log.info("Deleting invoice id: {}", id);
         invoiceRepository.deleteById(id);
     }
 
     // ---- CSV Upload ----
 
     public ImportResultDto importCsv(MultipartFile file) {
+        log.info("Importing invoices from CSV file: {}", file.getOriginalFilename());
         int importedCount = 0;
         int skippedCount = 0;
         try (var reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
@@ -123,24 +134,29 @@ public class InvoiceService {
                 importedCount++;
             }
         } catch (Exception e) {
+            log.error("Error during CSV import for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
             throw new RuntimeException("Errore durante l'elaborazione del CSV: " + e.getMessage(), e);
         }
+        log.info("CSV import completed: imported={}, skipped={}", importedCount, skippedCount);
         return new ImportResultDto(importedCount, 0, skippedCount);
     }
 
     // ---- XML Upload ----
 
     public ImportResultDto importXml(MultipartFile file) {
+        log.info("Importing invoice from XML/P7M file: {}", file.getOriginalFilename());
         try {
             String originalFileName = file.getOriginalFilename();
             byte[] bytes = file.getBytes();
             return importXmlFromBytes(bytes, originalFileName);
         } catch (Exception e) {
+            log.error("Error during XML import for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
             throw new RuntimeException("Errore durante l'elaborazione del file: " + e.getMessage(), e);
         }
     }
 
     public ImportResultDto importXmlFromBytes(byte[] bytes, String filename) {
+        log.info("Parsing invoice file: {}", filename);
         try {
             java.io.InputStream xmlInput;
             if (P7mContentExtractor.isP7mFile(filename)) {
@@ -156,6 +172,7 @@ public class InvoiceService {
                 var existing = invoiceRepository.findBySupplier_VatNumberAndInvoiceNumber(
                         invoice.getSupplier().getVatNumber(), invoice.getInvoiceNumber());
                 if (existing.isPresent()) {
+                    log.info("Invoice already exists, updating: number={}, file={}", invoice.getInvoiceNumber(), filename);
                     Invoice old = existing.get();
                     old.getLineItems().clear();
                     old.getAttachments().clear();
@@ -166,8 +183,10 @@ public class InvoiceService {
             }
 
             invoiceRepository.save(invoice);
+            log.info("Invoice imported: number={}, file={}", invoice.getInvoiceNumber(), filename);
             return new ImportResultDto(1, 0, 0);
         } catch (Exception e) {
+            log.error("Error parsing invoice file '{}': {}", filename, e.getMessage(), e);
             throw new RuntimeException("Errore durante l'elaborazione del file: " + e.getMessage(), e);
         }
     }
@@ -238,12 +257,16 @@ public class InvoiceService {
         return supplierRepository.findByVatNumber(vatNumber)
                 .map(existing -> {
                     if (!existing.getName().equals(name)) {
+                        log.info("Updating supplier name for VAT {}: '{}' -> '{}'", vatNumber, existing.getName(), name);
                         existing.setName(name);
                         return supplierRepository.save(existing);
                     }
                     return existing;
                 })
-                .orElseGet(() -> supplierRepository.save(new Supplier(name, vatNumber)));
+                .orElseGet(() -> {
+                    log.info("Creating new supplier: name='{}', VAT={}", name, vatNumber);
+                    return supplierRepository.save(new Supplier(name, vatNumber));
+                });
     }
 
     private static LocalDate parseDate(String raw) {

@@ -11,6 +11,8 @@ import java.util.List;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ import it.assoincloud.backend.repository.MemberRepository;
 @Transactional
 public class MemberService {
 
+    private static final Logger log = LoggerFactory.getLogger(MemberService.class);
     private static final DateTimeFormatter CSV_DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter EXPORT_DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -35,35 +38,44 @@ public class MemberService {
 
     @Transactional(readOnly = true)
     public List<Member> findAll() {
+        log.info("Fetching all members");
         return memberRepository.findAll();
     }
 
     @Transactional(readOnly = true)
     public Member findById(String id) {
+        log.debug("Fetching member by id: {}", id);
         return memberRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found: " + id));
     }
 
     public Member create(Member member) {
         if (memberRepository.existsByFiscalCode(member.getFiscalCode())) {
+            log.warn("Cannot create member: fiscal code already exists: {}", member.getFiscalCode());
             throw new IllegalArgumentException("Socio già esistente");
         }
-        return memberRepository.save(member);
+        log.info("Creating member: {} {} (fiscalCode={})", member.getFirstName(), member.getLastName(), member.getFiscalCode());
+        Member saved = memberRepository.save(member);
+        log.info("Member created with id: {}", saved.getId());
+        return saved;
     }
 
     public Member update(String id, Member updates) {
+        log.info("Updating member id: {}", id);
         Member existing = findById(id);
         updateFields(existing, updates);
         return memberRepository.save(existing);
     }
 
     public void delete(String id) {
+        log.info("Deleting member id: {}", id);
         memberRepository.deleteById(id);
     }
 
     @Transactional(readOnly = true)
     public byte[] exportXlsx() {
         List<Member> members = memberRepository.findAll(Sort.by("lastName").ascending().and(Sort.by("firstName").ascending()));
+        log.info("Exporting {} members to XLSX", members.size());
 
         try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Soci");
@@ -95,6 +107,7 @@ public class MemberService {
             workbook.write(output);
             return output.toByteArray();
         } catch (Exception e) {
+            log.error("Error during XLSX export: {}", e.getMessage(), e);
             throw new RuntimeException("Errore durante l'esportazione dei soci", e);
         }
     }
@@ -103,6 +116,7 @@ public class MemberService {
      * Import CSV with upsert logic: if member exists (by fiscal code), update only non-null fields from CSV.
      */
     public ImportResultDto importCsv(MultipartFile file) {
+        log.info("Importing members from CSV file: {}", file.getOriginalFilename());
         int importedCount = 0;
         int updatedCount = 0;
         int skippedCount = 0;
@@ -190,6 +204,7 @@ public class MemberService {
 
             return new ImportResultDto(importedCount, updatedCount, skippedCount);
         } catch (Exception e) {
+            log.error("Error during member CSV import for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
             throw new RuntimeException("Errore durante l'elaborazione del CSV: " + e.getMessage(), e);
         }
     }

@@ -1,4 +1,5 @@
 import { authFetch } from "./auth-fetch";
+import { logger } from "../logger";
 
 export interface BackupVersion {
   version: string;
@@ -6,8 +7,12 @@ export interface BackupVersion {
 
 /** Returns the current database version based on applied Flyway migrations. */
 export async function fetchCurrentVersion(): Promise<BackupVersion> {
+  logger.info("Fetching database version");
   const res = await authFetch("/backup/version");
-  if (!res.ok) throw new Error("Errore nel recupero della versione del database");
+  if (!res.ok) {
+    logger.error("Failed to fetch database version", res.status);
+    throw new Error("Errore nel recupero della versione del database");
+  }
   return res.json();
 }
 
@@ -16,6 +21,7 @@ export async function fetchCurrentVersion(): Promise<BackupVersion> {
  * without performing a restore.
  */
 export async function inspectBackupFile(file: File): Promise<BackupVersion> {
+  logger.info("Inspecting backup file", { filename: file.name });
   const formData = new FormData();
   formData.append("file", file);
 
@@ -26,6 +32,7 @@ export async function inspectBackupFile(file: File): Promise<BackupVersion> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    logger.error("Failed to inspect backup file", { filename: file.name, status: res.status });
     throw new Error(body?.error ?? "Il file non è un database SQLite valido");
   }
   return res.json();
@@ -33,8 +40,12 @@ export async function inspectBackupFile(file: File): Promise<BackupVersion> {
 
 /** Downloads the current database as a binary SQLite file. */
 export async function downloadBackup(): Promise<void> {
+  logger.info("Downloading database backup");
   const res = await authFetch("/backup");
-  if (!res.ok) throw new Error("Errore nel download del backup");
+  if (!res.ok) {
+    logger.error("Failed to download backup", res.status);
+    throw new Error("Errore nel download del backup");
+  }
 
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
@@ -52,6 +63,7 @@ export async function downloadBackup(): Promise<void> {
 
 /** Restores the database from an uploaded backup file. */
 export async function restoreBackup(file: File): Promise<void> {
+  logger.info("Restoring database from backup", { filename: file.name });
   const formData = new FormData();
   formData.append("file", file);
 

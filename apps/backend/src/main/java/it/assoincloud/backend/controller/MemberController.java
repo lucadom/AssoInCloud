@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -30,6 +32,8 @@ import it.assoincloud.backend.service.MemberService;
 @RequestMapping("/api/members")
 @CrossOrigin
 public class MemberController {
+
+    private static final Logger log = LoggerFactory.getLogger(MemberController.class);
 
     private final MemberService memberService;
 
@@ -77,6 +81,7 @@ public class MemberController {
             ImportResultDto result = memberService.importCsv(file);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("CSV member import failed for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Errore durante l'importazione del CSV: " + e.getMessage()));
         }
@@ -92,6 +97,7 @@ public class MemberController {
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(data);
         } catch (Exception e) {
+            log.error("XLSX member export failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Errore durante l'esportazione dei soci"));
         }

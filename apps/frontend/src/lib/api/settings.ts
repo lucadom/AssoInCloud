@@ -1,4 +1,5 @@
 import { authFetch } from "./auth-fetch";
+import { logger } from "../logger";
 
 export interface PecConfig {
   host: string;
@@ -14,8 +15,12 @@ export interface PecConfig {
 
 /** Fetches the current PEC configuration from the database. */
 export async function fetchPecConfig(): Promise<PecConfig> {
+  logger.info("Fetching PEC configuration");
   const res = await authFetch("/settings/pec");
-  if (!res.ok) throw new Error("Errore nel caricamento della configurazione PEC");
+  if (!res.ok) {
+    logger.error("Failed to fetch PEC configuration", res.status);
+    throw new Error("Errore nel caricamento della configurazione PEC");
+  }
   return res.json();
 }
 
@@ -24,6 +29,7 @@ export async function fetchPecConfig(): Promise<PecConfig> {
  * Returns the updated configuration.
  */
 export async function savePecConfig(config: PecConfig): Promise<PecConfig> {
+  logger.info("Saving PEC configuration", { host: config.host, port: config.port });
   const res = await authFetch("/settings/pec", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -31,6 +37,7 @@ export async function savePecConfig(config: PecConfig): Promise<PecConfig> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    logger.error("Failed to save PEC configuration", { status: res.status, error: body?.error });
     throw new Error(body?.error ?? "Errore nel salvataggio della configurazione PEC");
   }
   return res.json();

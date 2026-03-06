@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,8 @@ import it.assoincloud.backend.service.BackupService;
 @RequestMapping("/api/backup")
 @CrossOrigin
 public class BackupController {
+
+    private static final Logger log = LoggerFactory.getLogger(BackupController.class);
 
     private final BackupService backupService;
 
@@ -55,6 +59,7 @@ public class BackupController {
                     .contentLength(data.length)
                     .body(data);
         } catch (SQLException e) {
+            log.error("Error downloading database backup: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -69,8 +74,10 @@ public class BackupController {
             String version = backupService.readVersionFromBytes(bytes);
             return ResponseEntity.ok(new BackupVersionDto(version));
         } catch (IllegalArgumentException e) {
+            log.warn("Invalid backup file inspected: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (IOException e) {
+            log.error("Error reading backup file for inspection: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body(Map.of("error", "Errore nella lettura del file"));
         }
     }
@@ -85,8 +92,10 @@ public class BackupController {
             backupService.restoreBackup(bytes);
             return ResponseEntity.ok(Map.of("message", "Ripristino completato"));
         } catch (IllegalArgumentException e) {
+            log.warn("Invalid backup file for restore: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (SQLException | IOException e) {
+            log.error("Error restoring database backup: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body(Map.of("error", "Errore durante il ripristino del database"));
         }
     }

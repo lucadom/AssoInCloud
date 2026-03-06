@@ -2,6 +2,8 @@ package it.assoincloud.backend.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,6 +31,8 @@ import it.assoincloud.backend.service.InvoiceService;
 @RequestMapping("/api/invoices")
 @CrossOrigin
 public class InvoiceController {
+
+    private static final Logger log = LoggerFactory.getLogger(InvoiceController.class);
 
     private final InvoiceService invoiceService;
 
@@ -65,6 +69,7 @@ public class InvoiceController {
 
     @PostMapping("/upload/csv")
     public ImportResultDto uploadCsv(@RequestParam("files") MultipartFile[] files) {
+        log.info("Uploading {} CSV file(s) for invoice import", files.length);
         int totalImported = 0;
         int totalUpdated = 0;
         int totalSkipped = 0;
@@ -74,11 +79,13 @@ public class InvoiceController {
             totalUpdated += result.updated();
             totalSkipped += result.skipped();
         }
+        log.info("CSV upload complete: imported={}, updated={}, skipped={}", totalImported, totalUpdated, totalSkipped);
         return new ImportResultDto(totalImported, totalUpdated, totalSkipped);
     }
 
     @PostMapping("/upload/invoice")
     public ImportResultDto uploadInvoice(@RequestParam("files") MultipartFile[] files) {
+        log.info("Uploading {} invoice XML/P7M file(s)", files.length);
         int totalImported = 0;
         int totalUpdated = 0;
         int totalSkipped = 0;
@@ -88,10 +95,9 @@ public class InvoiceController {
             totalUpdated += result.updated();
             totalSkipped += result.skipped();
         }
+        log.info("Invoice XML/P7M upload complete: imported={}, updated={}, skipped={}", totalImported, totalUpdated, totalSkipped);
         return new ImportResultDto(totalImported, totalUpdated, totalSkipped);
     }
-
-    @GetMapping("/{invoiceId}/attachments/{attachmentId}")
     public ResponseEntity<byte[]> downloadAttachment(
             @PathVariable String invoiceId,
             @PathVariable String attachmentId) {

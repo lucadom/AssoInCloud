@@ -1,10 +1,15 @@
 import type { Member, MemberFormData, ImportResult } from "@/types";
 import { authFetch } from "./auth-fetch";
+import { logger } from "../logger";
 
 /** Fetch all members */
 export async function fetchMembers(): Promise<Member[]> {
+  logger.info("Fetching all members");
   const res = await authFetch("/members");
-  if (!res.ok) throw new Error("Errore nel caricamento dei soci");
+  if (!res.ok) {
+    logger.error("Failed to fetch members", res.status);
+    throw new Error("Errore nel caricamento dei soci");
+  }
   return res.json();
 }
 
@@ -17,6 +22,7 @@ export async function fetchMember(id: string): Promise<Member> {
 
 /** Create a new member */
 export async function createMember(data: MemberFormData): Promise<Member> {
+  logger.info("Creating member", { fiscalCode: data.fiscalCode });
   const res = await authFetch("/members", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -24,6 +30,7 @@ export async function createMember(data: MemberFormData): Promise<Member> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    logger.error("Failed to create member", { status: res.status, error: body?.error });
     throw new Error(body?.error ?? "Errore nella creazione del socio");
   }
   return res.json();
@@ -34,6 +41,7 @@ export async function updateMember(
   id: string,
   data: MemberFormData
 ): Promise<Member> {
+  logger.info("Updating member", { id });
   const res = await authFetch(`/members/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -41,6 +49,7 @@ export async function updateMember(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    logger.error("Failed to update member", { id, status: res.status, error: body?.error });
     throw new Error(body?.error ?? "Errore nell'aggiornamento del socio");
   }
   return res.json();
@@ -48,17 +57,20 @@ export async function updateMember(
 
 /** Delete a member */
 export async function deleteMember(id: string): Promise<void> {
+  logger.info("Deleting member", { id });
   const res = await authFetch(`/members/${id}`, {
     method: "DELETE",
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    logger.error("Failed to delete member", { id, status: res.status, error: body?.error });
     throw new Error(body?.error ?? "Errore nell'eliminazione del socio");
   }
 }
 
 /** Upload a CSV file with members to import/update */
 export async function uploadMembersCsv(file: File): Promise<ImportResult> {
+  logger.info("Uploading members CSV", { filename: file.name });
   const formData = new FormData();
   formData.append("file", file);
 
@@ -69,6 +81,7 @@ export async function uploadMembersCsv(file: File): Promise<ImportResult> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    logger.error("Failed to upload members CSV", { status: res.status, error: body?.error });
     throw new Error(body?.error ?? "Errore nell'importazione del CSV");
   }
 
@@ -77,6 +90,7 @@ export async function uploadMembersCsv(file: File): Promise<ImportResult> {
 
 /** Export members as XLSX */
 export async function exportMembersXlsx(): Promise<Blob> {
+  logger.info("Exporting members as XLSX");
   const res = await authFetch("/members/export-xlsx", {
     method: "GET",
     headers: {
@@ -86,6 +100,7 @@ export async function exportMembersXlsx(): Promise<Blob> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    logger.error("Failed to export members XLSX", { status: res.status, error: body?.error });
     throw new Error(body?.error ?? "Errore nell'esportazione dei soci");
   }
 

@@ -3,6 +3,8 @@ package it.assoincloud.backend.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -24,6 +26,8 @@ import it.assoincloud.backend.service.SupplierService;
 @RequestMapping("/api/suppliers")
 @CrossOrigin
 public class SupplierController {
+
+    private static final Logger log = LoggerFactory.getLogger(SupplierController.class);
 
     private final SupplierService supplierService;
 
@@ -47,6 +51,7 @@ public class SupplierController {
         try {
             return ResponseEntity.status(HttpStatus.CREATED).body(supplierService.create(data));
         } catch (IllegalArgumentException e) {
+            log.warn("Failed to create supplier: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -56,6 +61,7 @@ public class SupplierController {
         try {
             return ResponseEntity.ok(supplierService.update(id, data));
         } catch (IllegalArgumentException e) {
+            log.warn("Failed to update supplier id={}: {}", id, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -66,6 +72,7 @@ public class SupplierController {
             supplierService.delete(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalStateException e) {
+            log.warn("Cannot delete supplier id={}: {}", id, e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", e.getMessage()));
         }

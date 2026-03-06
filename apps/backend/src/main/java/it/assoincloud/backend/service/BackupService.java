@@ -17,6 +17,8 @@ import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
 import org.flywaydb.core.api.MigrationVersion;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.sqlite.SQLiteConnection;
 import org.sqlite.core.DB;
@@ -26,6 +28,7 @@ import jakarta.persistence.EntityManagerFactory;
 @Service
 public class BackupService {
 
+    private static final Logger log = LoggerFactory.getLogger(BackupService.class);
     private static final byte[] SQLITE_HEADER = "SQLite format 3\000".getBytes();
 
     private final DataSource dataSource;
@@ -56,9 +59,12 @@ public class BackupService {
      * Uses sqlite3_serialize() which produces a standard SQLite database file format.
      */
     public byte[] downloadBackup() throws SQLException {
+        log.info("Creating database backup");
         try (Connection conn = dataSource.getConnection()) {
             SQLiteConnection sqliteConn = conn.unwrap(SQLiteConnection.class);
-            return sqliteConn.getDatabase().serialize("main");
+            byte[] bytes = sqliteConn.getDatabase().serialize("main");
+            log.info("Database backup created: {} bytes", bytes.length);
+            return bytes;
         }
     }
 
@@ -84,6 +90,7 @@ public class BackupService {
      * Evicts the JPA L2 cache after restore to prevent stale reads.
      */
     public void restoreBackup(byte[] dbBytes) throws SQLException, IOException {
+        log.info("Starting database restore: {} bytes", dbBytes.length);
         validateSqliteHeader(dbBytes);
 
         Path tempFile = Files.createTempFile("assoincloud_restore_", ".db");
@@ -95,6 +102,7 @@ public class BackupService {
                 db.restore("main", tempFile.toAbsolutePath().toString(), null);
             }
             entityManagerFactory.getCache().evictAll();
+            log.info("Database restore completed successfully");
         } finally {
             Files.deleteIfExists(tempFile);
         }
