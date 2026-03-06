@@ -1,7 +1,7 @@
 # =============================================================================
 # AssoInCloud — Single multi-stage Dockerfile
-# Builds backend (Spring Boot) and frontend (Next.js) and runs both behind
-# nginx as reverse proxy.
+# Builds backend (Spring Boot) and frontend (Next.js static export) and
+# serves everything from a single Spring Boot process.
 # =============================================================================
 
 # ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ RUN ./mvnw package -DskipTests -B && \
     mv target/*.jar target/backend.jar
 
 # ---------------------------------------------------------------------------
-# Stage 2: Build the Next.js frontend
+# Stage 2: Build the Next.js frontend (static export)
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS frontend-build
 
@@ -40,42 +40,24 @@ RUN npm ci --legacy-peer-deps
 # Copy source code
 COPY apps/frontend/ .
 
-# Build with API URL set to relative /api so nginx can proxy
+# Build as static export so Spring Boot can serve the files directly
 ENV NEXT_PUBLIC_API_URL=/api
+ENV NEXT_OUTPUT=export
 RUN npm run build
 
 # ---------------------------------------------------------------------------
-# Stage 3: Production runtime
+# Stage 3: Production runtime — Spring Boot only
 # ---------------------------------------------------------------------------
 FROM eclipse-temurin:17-jre-jammy AS runtime
-
-# Install Node.js 20 and nginx
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
-    mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-      | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" \
-      > /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends nodejs nginx && \
-    apt-get purge -y gnupg && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # ---------- Backend ----------
 COPY --from=backend-build /build/target/backend.jar /app/backend.jar
 
-# ---------- Frontend (standalone) ----------
-COPY --from=frontend-build /build/.next/standalone /app/frontend/
-COPY --from=frontend-build /build/.next/static     /app/frontend/.next/static
-COPY --from=frontend-build /build/public            /app/frontend/public
-
-# ---------- Nginx config ----------
-COPY docker/nginx.conf /etc/nginx/nginx.conf
+# ---------- Frontend (static export) ----------
+# Place the exported files where Spring Boot's resource handler can find them
+COPY --from=frontend-build /build/out /app/static
 
 # ---------- Entrypoint ----------
 COPY docker/entrypoint.sh /app/entrypoint.sh
@@ -88,10 +70,9 @@ RUN mkdir -p /data
 ENV ASSOINCLOUD_DB_PATH=/data/assoincloud.db
 ENV ASSOINCLOUD_PASSWORD=
 ENV SERVER_PORT=8080
-ENV FRONTEND_PORT=3000
-ENV NGINX_PORT=80
+ENV JAVA_OPTS="-Xms128m -Xmx512m"
 
-EXPOSE 80
+EXPOSE 8080
 
 VOLUME ["/data"]
 

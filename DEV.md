@@ -105,9 +105,10 @@ npm run test:coverage
 
 ## Modalità 2 — Docker Compose per lo sviluppo (consigliata)
 
-Avvia backend, frontend e nginx in container Docker con **hot‑reload**:
+Avvia backend e frontend in container Docker con **hot‑reload**:
 le modifiche al codice sorgente si riflettono immediatamente senza
-ricostruire le immagini.
+ricostruire le immagini. Il dev server Next.js funge da proxy per
+le chiamate `/api/*` verso il backend — nessun nginx necessario.
 
 ### Avvio
 
@@ -122,12 +123,19 @@ docker compose -f docker-compose.dev.yml up --build
 ### Cosa viene avviato
 
 | Servizio | Immagine | Porta | Descrizione |
-|----------|----------|-------|-------------|
-| `backend` | JDK 17 + Maven | 8080 | `spring-boot:run` con devtools |
-| `frontend` | Node 20 | 3000 | `next dev` con HMR |
-| `nginx` | nginx:alpine | **80** | Reverse proxy (`/api/` → backend, `/` → frontend) |
+|----------|----------|-------|--------------|
+| `backend` | JDK 17 + Maven | (interna) | `spring-boot:run` con devtools |
+| `frontend` | Node 20 | **80** | `next dev` con HMR; proxy `/api/*` → backend |
 
 L'applicazione è raggiungibile su **http://localhost** (porta 80).
+
+### Architettura in sviluppo
+
+```
+Browser  →  Next.js dev server (:3000, esposto su :80)
+                ↓ /api/*  (rewrite in next.config.ts)
+           Spring Boot (backend:8080, solo rete interna)
+```
 
 ### Come funziona l'hot-reload
 
@@ -182,12 +190,14 @@ docker compose -f docker-compose.dev.yml up --build
 ## Variabili d'ambiente
 
 | Variabile | Descrizione | Default |
-|-----------|-------------|---------|
+|-----------|-------------|----------|
 | `ASSOINCLOUD_DB_PATH` | Percorso del file SQLite | `./data/assoincloud.db` (locale) · `/data/assoincloud.db` (Docker) |
 | `ASSOINCLOUD_PASSWORD` | Password di accesso. Vuota = autenticazione disabilitata | _(vuota)_ |
-| `ASSOINCLOUD_PORT` | Porta nginx esposta dall'host (solo Docker) | `80` |
+| `ASSOINCLOUD_PORT` | Porta esposta dall'host (solo Docker) | `80` |
+| `SERVER_PORT` | Porta interna Spring Boot (prod Docker) | `8080` |
 | `JAVA_OPTS` | Opzioni JVM | `-Xms128m -Xmx512m` |
 | `NEXT_PUBLIC_API_URL` | URL base delle API per il frontend | `http://localhost:8080/api` (locale) · `/api` (Docker) |
+| `BACKEND_URL` | URL del backend usato dal proxy Next.js dev (solo dev Docker) | `http://localhost:8080` |
 
 > La configurazione della casella PEC (host IMAP, credenziali, SSL) si imposta
 > dall'interfaccia web nella pagina **Impostazioni → PEC** e viene salvata nel

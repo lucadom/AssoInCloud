@@ -7,7 +7,7 @@
 # Features:
 #   - Backend: Spring Boot with devtools hot-reload (source mounted)
 #   - Frontend: Next.js dev server with HMR (source mounted)
-#   - Nginx reverse proxy on port 80 (same as production)
+#     The Next.js dev server proxies /api/* to the backend container
 #   - SQLite DB at ./data/assoincloud.db (shared with host)
 #   - No image rebuild needed on code changes
 # =============================================================================
@@ -41,9 +41,13 @@ services:
       dockerfile: docker/Dockerfile.dev.frontend
     container_name: assoincloud-frontend-dev
     restart: unless-stopped
+    ports:
+      - "${ASSOINCLOUD_PORT:-80}:3000"
     environment:
-      # Point API calls to the backend service via nginx
+      # API calls go to /api and are proxied by the Next.js dev server
       NEXT_PUBLIC_API_URL: /api
+      # Tell next.config.ts where to proxy /api/* in dev
+      BACKEND_URL: http://backend:8080
     volumes:
       # Mount the frontend source for HMR
       - ./apps/frontend/src:/app/src:cached
@@ -54,19 +58,8 @@ services:
       - ./apps/frontend/postcss.config.cjs:/app/postcss.config.cjs:cached
       # Exclude node_modules from mount (use container's own)
       - frontend-node-modules:/app/node_modules
-
-  # ---------- Nginx reverse proxy ----------
-  nginx:
-    image: nginx:alpine
-    container_name: assoincloud-nginx-dev
-    restart: unless-stopped
-    ports:
-      - "${ASSOINCLOUD_PORT:-80}:80"
-    volumes:
-      - ./docker/nginx.dev.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - backend
-      - frontend
 
 volumes:
   maven-repo:

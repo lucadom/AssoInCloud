@@ -63,6 +63,25 @@ export function AppLayout() {
   const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const [dbVersion, setDbVersion] = useState<string | null>(null);
 
+  // Client-side auth guard — mirrors middleware.ts but works with static export
+  useEffect(() => {
+    function getCookie(name: string): string | undefined {
+      return document.cookie.split(";").map((c) => c.trim()).find((c) => c.startsWith(name + "="))?.split("=")[1];
+    }
+    if (getCookie("assoincloud_token")) return;
+    if (getCookie("assoincloud_auth_disabled") === "true") return;
+    fetch("/api/auth/status")
+      .then((r) => r.json())
+      .then((status: { authEnabled: boolean }) => {
+        if (status.authEnabled) {
+          router.replace("/login");
+        } else {
+          document.cookie = "assoincloud_auth_disabled=true; path=/; max-age=3600; SameSite=Lax";
+        }
+      })
+      .catch(() => router.replace("/login"));
+  }, [router]);
+
   useEffect(() => {
     fetchCurrentVersion()
       .then((data) => setDbVersion(data.version))

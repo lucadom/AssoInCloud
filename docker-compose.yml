@@ -6,7 +6,7 @@ services:
     container_name: assoincloud
     restart: unless-stopped
     ports:
-      - "${ASSOINCLOUD_PORT:-80}:80"
+      - "${ASSOINCLOUD_PORT:-80}:${SERVER_PORT:-8080}"
     environment:
       # Path to the SQLite database file inside the container.
       # The /data directory is mounted as a volume for persistence.
@@ -16,9 +16,8 @@ services:
       # to log in. When empty, no authentication is required.
       ASSOINCLOUD_PASSWORD: "${ASSOINCLOUD_PASSWORD:-}"
 
-      # Internal ports (normally you don't need to change these)
+      # Internal Spring Boot port (normally you don't need to change this)
       SERVER_PORT: "${SERVER_PORT:-8080}"
-      FRONTEND_PORT: "${FRONTEND_PORT:-3000}"
 
       # JVM options (e.g. memory limits)
       JAVA_OPTS: "${JAVA_OPTS:--Xms128m -Xmx512m}"

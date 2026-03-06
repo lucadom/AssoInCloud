@@ -23,22 +23,19 @@ consultare la casella PEC dell'associazione.
 | Backend | Java 17, Spring Boot 4, Spring Data JPA, Flyway, SQLite |
 | Frontend | Next.js 16, React 19, Mantine 8, TypeScript 5 |
 | Database | SQLite (file-based) |
-| Reverse Proxy | nginx |
 
 L'applicazione è distribuita come un **singolo container Docker** che include:
 
-- **Backend** — API REST Spring Boot (porta interna 8080)
-- **Frontend** — Next.js in modalità standalone (porta interna 3000)
-- **nginx** — reverse proxy che espone entrambi i servizi sulla porta 80
+- **Backend** — API REST Spring Boot; serve anche il frontend come file statici
+- **Frontend** — Next.js compilato come export statico (HTML/CSS/JS)
 
 ```
                     ┌─────────────────────────────────┐
                     │         Container Docker         │
                     │                                  │
-  porta 80    ───── │  nginx ─┬─ /api/* ─→ Backend    │
-                    │         │            :8080       │
-                    │         └─ /*     ─→ Frontend    │
-                    │                      :3000       │
+  porta esterna ── │  Spring Boot :8080               │
+                    │    ├─ /api/*  ─→ API REST        │
+                    │    └─ /*      ─→ Frontend statico│
                     │                                  │
                     │  volume /data ─→ SQLite DB       │
                     └─────────────────────────────────┘
@@ -94,11 +91,9 @@ nella stessa directory, oppure inline al lancio.
 | `ASSOINCLOUD_DB_PATH` | Percorso del file database SQLite dentro al container | `/data/assoincloud.db` |
 | `ASSOINCLOUD_PASSWORD` | Password di accesso all'applicazione. Se vuota, l'autenticazione è disabilitata | _(vuota)_ |
 | `JAVA_OPTS` | Opzioni JVM (memoria, GC, ecc.) | `-Xms128m -Xmx512m` |
-| `SERVER_PORT` | Porta interna del backend Spring Boot | `8080` |
-| `FRONTEND_PORT` | Porta interna del frontend Next.js | `3000` |
+| `SERVER_PORT` | Porta interna del backend Spring Boot (coincide con la porta esposta al netto del mapping) | `8080` |
 
-> **Nota:** `SERVER_PORT` e `FRONTEND_PORT` sono parametri interni al container
-> e normalmente non è necessario modificarli.
+> **Nota:** `SERVER_PORT` è il parametro interno al container; `ASSOINCLOUD_PORT` è la porta remappata sull'host.
 >
 > La configurazione della casella PEC (host, porta, credenziali IMAP) si imposta
 > direttamente dall'interfaccia web nella pagina **Impostazioni → PEC**; non
@@ -189,22 +184,14 @@ assoincloud/
 ├── docker-compose.yml    # Orchestrazione del container
 ├── .dockerignore         # File esclusi dal contesto di build
 └── docker/
-    ├── nginx.conf        # Configurazione nginx (reverse proxy)
-    └── entrypoint.sh     # Script di avvio dei servizi nel container
+    └── entrypoint.sh     # Script di avvio del container
 ```
 
 ### Dockerfile — Fasi di build
 
 1. **backend-build** — Compila il backend Spring Boot con Maven, produce `backend.jar`
-2. **frontend-build** — Installa le dipendenze npm e compila Next.js in modalità standalone
-3. **runtime** — Immagine finale leggera (JRE 17 + Node.js 20 + nginx) con solo gli artefatti necessari
-
-### nginx
-
-nginx fa da reverse proxy unico in ascolto sulla porta 80:
-
-- `/api/*` → inoltra al backend Spring Boot (porta 8080)
-- `/*` → inoltra al frontend Next.js (porta 3000)
+2. **frontend-build** — Installa le dipendenze npm e compila Next.js come export statico (`out/`)
+3. **runtime** — Immagine finale leggera (JRE 17) con `backend.jar` e il frontend statico in `/app/static/`
 
 ---
 

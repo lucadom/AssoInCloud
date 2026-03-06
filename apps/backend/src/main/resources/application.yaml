@@ -2,6 +2,10 @@ spring:
   application:
     name: backend
 
+  web:
+    resources:
+      static-locations: "file:/app/static/,classpath:/static/"
+
   datasource:
     url: jdbc:sqlite:${ASSOINCLOUD_DB_PATH:./data/assoincloud.db}
     driver-class-name: org.sqlite.JDBC
