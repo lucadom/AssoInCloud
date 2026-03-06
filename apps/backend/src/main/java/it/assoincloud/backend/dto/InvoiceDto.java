@@ -79,9 +79,9 @@ public record InvoiceDto(
         );
     }
 
-    public record SupplierDto(String id, String name, String vatNumber) {
+    public record SupplierDto(String id, String name, String vatNumber, String paymentMethod) {
         public static SupplierDto from(it.assoincloud.backend.entity.Supplier s) {
-            return new SupplierDto(s.getId(), s.getName(), s.getVatNumber());
+            return new SupplierDto(s.getId(), s.getName(), s.getVatNumber(), s.getPaymentMethod());
         }
     }
 

@@ -92,15 +92,15 @@ function sumTotal(invoices: Invoice[]): number {
 function daysUntilBirthday(birthDate: string): number {
   const today = new Date();
   const todayY = today.getFullYear();
+  const todayMidnight = new Date(todayY, today.getMonth(), today.getDate());
   const bday = new Date(birthDate);
 
   let next = new Date(todayY, bday.getMonth(), bday.getDate());
-  if (next < today) {
+  if (next < todayMidnight) {
     next = new Date(todayY + 1, bday.getMonth(), bday.getDate());
   }
 
-  const ms = next.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  return Math.round(ms / (1000 * 60 * 60 * 24));
+  return Math.round((next.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function formatDate(iso: string): string {

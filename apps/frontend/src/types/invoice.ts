@@ -4,12 +4,14 @@ export interface Supplier {
   name: string;       // Denominazione fornitore
   vatNumber: string;   // Identificativo Fornitore (Partita IVA) - unique
   invoiceCount: number; // Number of associated invoices
+  paymentMethod?: string | null; // Modalità di pagamento
 }
 
 /** Payload for creating/updating a supplier */
 export interface SupplierFormData {
   name: string;
   vatNumber: string;
+  paymentMethod?: string | null;
 }
 
 /** Invoice line item (DettaglioLinee from FatturaPA XML) */

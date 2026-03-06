@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import {
   Modal,
   TextInput,
+  Select,
   Button,
   Group,
   Stack,
@@ -14,6 +15,7 @@ import type { Supplier } from "@/types";
 interface SupplierFormValues {
   name: string;
   vatNumber: string;
+  paymentMethod: string | null;
 }
 
 interface SupplierFormModalProps {
@@ -35,6 +37,7 @@ export function SupplierFormModal({
     initialValues: {
       name: "",
       vatNumber: "",
+      paymentMethod: null,
     },
     validate: {
       name: (v) =>
@@ -50,6 +53,7 @@ export function SupplierFormModal({
         form.setValues({
           name: supplier.name,
           vatNumber: supplier.vatNumber,
+          paymentMethod: supplier.paymentMethod ?? null,
         });
       } else {
         form.reset();
@@ -77,6 +81,17 @@ export function SupplierFormModal({
             label="Partita IVA"
             placeholder="Es. 01234567890"
             {...form.getInputProps("vatNumber")}
+          />
+          <Select
+            label="Modalità di pagamento"
+            placeholder="Seleziona..."
+            clearable
+            data={[
+              { value: "CASH", label: "Contanti" },
+              { value: "BANK_TRANSFER", label: "Bonifico" },
+              { value: "DIRECT_DEBIT", label: "Addebito diretto" },
+            ]}
+            {...form.getInputProps("paymentMethod")}
           />
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose}>

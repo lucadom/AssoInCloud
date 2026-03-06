@@ -61,6 +61,7 @@ export function SuppliersPage() {
       const payload = {
         name: values.name,
         vatNumber: values.vatNumber,
+        paymentMethod: values.paymentMethod ?? null,
       };
 
       if (selectedSupplier) {

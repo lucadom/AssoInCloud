@@ -1,7 +1,13 @@
 package it.assoincloud.backend.entity;
 
-import jakarta.persistence.*;
 import java.util.Objects;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "suppliers")
@@ -16,6 +22,9 @@ public class Supplier {
 
     @Column(name = "vat_number", nullable = false, unique = true)
     private String vatNumber;
+
+    @Column(name = "payment_method")
+    private String paymentMethod;
 
     public Supplier() {}
 
@@ -32,6 +41,9 @@ public class Supplier {
 
     public String getVatNumber() { return vatNumber; }
     public void setVatNumber(String vatNumber) { this.vatNumber = vatNumber; }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
     @Override
     public boolean equals(Object o) {

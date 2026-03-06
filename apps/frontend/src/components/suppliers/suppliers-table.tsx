@@ -48,6 +48,35 @@ export function SuppliersTable({
         ),
       },
       {
+        accessorFn: (row) => {
+          const map: Record<string, string> = {
+            CASH: "Contanti",
+            BANK_TRANSFER: "Bonifico",
+            DIRECT_DEBIT: "Addebito diretto",
+          };
+          return row.paymentMethod ? (map[row.paymentMethod] ?? row.paymentMethod) : null;
+        },
+        id: "paymentMethod",
+        header: "Modalità di pagamento",
+        size: 180,
+        filterVariant: "multi-select",
+        Cell: ({ row }) => {
+          const value = row.original.paymentMethod;
+          if (!value) return <span>—</span>;
+          const map: Record<string, { label: string; color: string }> = {
+            CASH: { label: "Contanti", color: "green" },
+            BANK_TRANSFER: { label: "Bonifico", color: "blue" },
+            DIRECT_DEBIT: { label: "Addebito diretto", color: "orange" },
+          };
+          const entry = map[value];
+          return entry ? (
+            <Badge variant="light" color={entry.color} size="sm">{entry.label}</Badge>
+          ) : (
+            <span>{value}</span>
+          );
+        },
+      },
+      {
         accessorKey: "invoiceCount",
         header: "Fatture",
         size: 100,

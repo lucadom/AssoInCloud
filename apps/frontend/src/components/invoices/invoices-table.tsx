@@ -10,6 +10,7 @@ import {
 import { MRT_Localization_IT } from "mantine-react-table/locales/it/index.esm.mjs";
 import {
   ActionIcon,
+  Badge,
   Group,
   ScrollArea,
   SegmentedControl,
@@ -46,7 +47,7 @@ function formatCurrency(amount: number, isCreditNote: boolean = false): string {
   });
 }
 
-type DatePreset = "all" | "thisMonth" | "lastMonth" | "twoMonthsAgo" | "last3Months" | "thisYear" | "previousYear";
+type DatePreset = "all" | "thisMonth" | "lastMonth" | "twoMonthsAgo" | "threeMonthsAgo" | "last3Months" | "thisYear" | "previousYear";
 
 function getPresetRange(preset: DatePreset): [Date | null, Date | null] {
   const now = new Date();
@@ -64,6 +65,11 @@ function getPresetRange(preset: DatePreset): [Date | null, Date | null] {
     case "twoMonthsAgo": {
       const from = new Date(today.getFullYear(), today.getMonth() - 2, 1);
       const to = new Date(today.getFullYear(), today.getMonth() - 1, 0);
+      return [from, to];
+    }
+    case "threeMonthsAgo": {
+      const from = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+      const to = new Date(today.getFullYear(), today.getMonth() - 2, 0);
       return [from, to];
     }
     case "last3Months": {
@@ -144,6 +150,36 @@ export function InvoicesTable({
         id: "supplierName",
         header: "Fornitore",
         size: 200,
+      },
+      {
+        accessorFn: (row) => {
+          const map: Record<string, string> = {
+            CASH: "Contanti",
+            BANK_TRANSFER: "Bonifico",
+            DIRECT_DEBIT: "Addebito diretto",
+          };
+          const pm = row.supplier.paymentMethod;
+          return pm ? (map[pm] ?? pm) : null;
+        },
+        id: "supplierPaymentMethod",
+        header: "Modalità di pagamento",
+        size: 180,
+        filterVariant: "multi-select",
+        Cell: ({ row }) => {
+          const value = row.original.supplier.paymentMethod;
+          if (!value) return <span>—</span>;
+          const map: Record<string, { label: string; color: string }> = {
+            CASH: { label: "Contanti", color: "green" },
+            BANK_TRANSFER: { label: "Bonifico", color: "blue" },
+            DIRECT_DEBIT: { label: "Addebito diretto", color: "orange" },
+          };
+          const entry = map[value];
+          return entry ? (
+            <Badge variant="light" color={entry.color} size="sm">{entry.label}</Badge>
+          ) : (
+            <span>{value}</span>
+          );
+        },
       },
       {
         accessorKey: "taxableAmount",
@@ -335,6 +371,7 @@ export function InvoicesTable({
             { label: "Questo mese", value: "thisMonth" },
             { label: "Mese scorso", value: "lastMonth" },
             { label: "Due mesi fa", value: "twoMonthsAgo" },
+            { label: "Tre mesi fa", value: "threeMonthsAgo" },
             { label: "Ultimi 3 mesi", value: "last3Months" },
             { label: "Anno corrente", value: "thisYear" },
             { label: "Anno precedente", value: "previousYear" },

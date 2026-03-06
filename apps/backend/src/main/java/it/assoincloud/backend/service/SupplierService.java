@@ -42,6 +42,7 @@ public class SupplierService {
             throw new IllegalArgumentException("Esiste già un fornitore con P.IVA " + data.vatNumber());
         }
         Supplier s = new Supplier(data.name(), data.vatNumber());
+        s.setPaymentMethod(data.paymentMethod());
         s = supplierRepository.save(s);
         return SupplierDto.from(s, 0);
     }
@@ -59,6 +60,7 @@ public class SupplierService {
 
         s.setName(data.name());
         s.setVatNumber(data.vatNumber());
+        s.setPaymentMethod(data.paymentMethod());
         s = supplierRepository.save(s);
         return SupplierDto.from(s, invoiceRepository.countBySupplierId(s.getId()));
     }

@@ -53,7 +53,70 @@ class SupplierControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name", is("Test SRL")))
                 .andExpect(jsonPath("$.vatNumber", is("IT12345678901")))
-                .andExpect(jsonPath("$.invoiceCount", is(0)));
+                .andExpect(jsonPath("$.invoiceCount", is(0)))
+                .andExpect(jsonPath("$.paymentMethod").doesNotExist());
+    }
+
+    @Test
+    void createShouldAcceptPaymentMethod() throws Exception {
+        mockMvc.perform(post("/api/suppliers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Bonifico SRL\",\"vatNumber\":\"IT10101010101\",\"paymentMethod\":\"BANK_TRANSFER\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.paymentMethod", is("BANK_TRANSFER")));
+    }
+
+    @Test
+    void updateShouldModifyPaymentMethod() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/suppliers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"PM Test\",\"vatNumber\":\"IT20202020202\",\"paymentMethod\":\"CASH\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String id = objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(put("/api/suppliers/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"PM Test\",\"vatNumber\":\"IT20202020202\",\"paymentMethod\":\"DIRECT_DEBIT\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentMethod", is("DIRECT_DEBIT")));
+    }
+
+    @Test
+    void autoCreatedSupplierFromInvoiceShouldHaveNullPaymentMethod() throws Exception {
+        String invoiceJson = """
+                {
+                    "documentType": "Fattura",
+                    "invoiceNumber": "PM-AUTO/2024",
+                    "date": "2024-06-15",
+                    "supplierName": "Auto Supplier SRL",
+                    "supplierVatNumber": "IT30303030303",
+                    "taxableAmount": 100,
+                    "taxAmount": 22,
+                    "sdiNumber": "",
+                    "viewed": false
+                }
+                """;
+        mockMvc.perform(post("/api/invoices")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invoiceJson))
+                .andExpect(status().isCreated());
+
+        MvcResult listResult = mockMvc.perform(get("/api/suppliers"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode suppliers = objectMapper.readTree(listResult.getResponse().getContentAsString());
+        JsonNode autoCreated = null;
+        for (JsonNode node : suppliers) {
+            if ("IT30303030303".equals(node.get("vatNumber").asText())) {
+                autoCreated = node;
+                break;
+            }
+        }
+        assert autoCreated != null : "Fornitore auto-creato non trovato";
+        assert autoCreated.get("paymentMethod").isNull() : "paymentMethod dovrebbe essere null per fornitore auto-creato";
     }
 
     @Test
