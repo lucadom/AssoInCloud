@@ -66,4 +66,13 @@ class PecControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").exists());
     }
+
+    @Test
+    void searchMessages_should_return404_when_notConfigured() throws Exception {
+        mockMvc.perform(get("/api/pec/messages/search")
+                        .param("folder", "INBOX")
+                        .param("query", "fattura"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").exists());
+    }
 }

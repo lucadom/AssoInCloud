@@ -6,8 +6,8 @@ import { TestWrapper } from "@/test-utils";
 import type { PecFolder } from "@/types";
 
 const folders: PecFolder[] = [
-  { name: "INBOX", fullName: "INBOX", unreadCount: 3 },
-  { name: "Sent", fullName: "Sent", unreadCount: 0 },
+  { name: "INBOX", fullName: "INBOX", unreadCount: 3, messageCount: 42 },
+  { name: "Sent", fullName: "Sent", unreadCount: 0, messageCount: 7 },
 ];
 
 describe("FolderList", () => {
@@ -58,5 +58,15 @@ describe("FolderList", () => {
     );
     // Renders without error and shows selected folder
     expect(screen.getByText("INBOX")).toBeInTheDocument();
+  });
+
+  it("should show the total message count under the folder name", () => {
+    render(
+      <TestWrapper>
+        <FolderList folders={folders} selected={null} onSelect={() => {}} />
+      </TestWrapper>
+    );
+    expect(screen.getByText("42 messaggi")).toBeInTheDocument();
+    expect(screen.getByText("7 messaggi")).toBeInTheDocument();
   });
 });

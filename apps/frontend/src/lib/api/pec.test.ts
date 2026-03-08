@@ -8,6 +8,7 @@ import {
   getPecAttachmentPreviewUrl,
   fetchPecAttachmentAsInvoice,
   importPecAttachmentAsInvoice,
+  searchPecMessages,
   isPecNotConfiguredError,
 } from "./pec";
 import { authFetch } from "./auth-fetch";
@@ -287,6 +288,28 @@ describe("importPecAttachmentAsInvoice", () => {
     mockAuthFetch.mockResolvedValueOnce(new Response("bad", { status: 500 }));
     await expect(importPecAttachmentAsInvoice("INBOX", 1, 0)).rejects.toThrow(
       "Impossibile importare la fattura"
+    );
+  });
+});
+
+describe("searchPecMessages", () => {
+  it("should return matching messages on success", async () => {
+    const messages = [{ uid: 5, subject: "Fattura n.1" }];
+    mockAuthFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify(messages), { status: 200 })
+    );
+    const result = await searchPecMessages("INBOX", "fattura");
+    expect(result).toEqual(messages);
+    const url = mockAuthFetch.mock.lastCall![0] as string;
+    expect(url).toContain("/pec/messages/search");
+    expect(url).toContain("query=fattura");
+    expect(url).toContain("folder=INBOX");
+  });
+
+  it("should throw on error", async () => {
+    mockAuthFetch.mockResolvedValueOnce(new Response("{}", { status: 500 }));
+    await expect(searchPecMessages("INBOX", "test")).rejects.toThrow(
+      "Errore nella ricerca dei messaggi"
     );
   });
 });

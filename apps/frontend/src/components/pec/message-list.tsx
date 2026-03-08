@@ -1,7 +1,7 @@
 "use client";
 
-import { ActionIcon, Badge, Box, Group, Stack, Text, Tooltip, UnstyledButton } from "@mantine/core";
-import { IconMail, IconMailOpened } from "@tabler/icons-react";
+import { ActionIcon, Badge, Box, Button, Group, Stack, Text, Tooltip, UnstyledButton } from "@mantine/core";
+import { IconChevronDown, IconMail, IconMailOpened } from "@tabler/icons-react";
 import type { PecMessageSummary } from "@/types";
 
 interface Props {
@@ -9,9 +9,12 @@ interface Props {
   selectedUid: number | null;
   onSelect: (msg: PecMessageSummary) => void;
   onToggleRead: (msg: PecMessageSummary, read: boolean) => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, selectedUid, onSelect, onToggleRead }: Props) {
+export function MessageList({ messages, selectedUid, onSelect, onToggleRead, hasMore, loadingMore, onLoadMore }: Props) {
   if (messages.length === 0) {
     return (
       <Text c="dimmed" size="sm" p="md">
@@ -78,6 +81,19 @@ export function MessageList({ messages, selectedUid, onSelect, onToggleRead }: P
           </Group>
         </UnstyledButton>
       ))}
+      {hasMore && (
+        <Box p="sm" style={{ textAlign: "center" }}>
+          <Button
+            variant="subtle"
+            size="xs"
+            leftSection={<IconChevronDown size={14} />}
+            loading={loadingMore}
+            onClick={onLoadMore}
+          >
+            Carica altri messaggi
+          </Button>
+        </Box>
+      )}
     </Stack>
   );
 }

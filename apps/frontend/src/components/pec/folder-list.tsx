@@ -25,6 +25,7 @@ export function FolderList({ folders, selected, onSelect }: Props) {
         <NavLink
           key={f.fullName}
           label={f.name}
+          description={`${f.messageCount} messaggi`}
           active={selected === f.fullName}
           onClick={() => onSelect(f.fullName)}
           leftSection={

@@ -72,6 +72,17 @@ public class PecController {
         return ResponseEntity.ok(messages);
     }
 
+    @GetMapping("/messages/search")
+    public ResponseEntity<?> searchMessages(
+            @RequestParam String folder,
+            @RequestParam String query) {
+        if (!pecService.isConfigured()) {
+            return notConfigured();
+        }
+        List<PecMessageSummaryDto> messages = pecService.searchMessages(folder, query);
+        return ResponseEntity.ok(messages);
+    }
+
     @GetMapping("/messages/{uid}")
     public ResponseEntity<?> getMessage(
             @PathVariable long uid,

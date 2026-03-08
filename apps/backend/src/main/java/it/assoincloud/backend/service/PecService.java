@@ -29,6 +29,11 @@ import jakarta.mail.Store;
 import jakarta.mail.UIDFolder;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.search.BodyTerm;
+import jakarta.mail.search.FromStringTerm;
+import jakarta.mail.search.OrTerm;
+import jakarta.mail.search.SearchTerm;
+import jakarta.mail.search.SubjectTerm;
 
 @Service
 public class PecService {
@@ -105,6 +110,35 @@ public class PecService {
         } catch (MessagingException e) {
             log.error("Error reading PEC messages from folder '{}': {}", folderName, e.getMessage(), e);
             throw new RuntimeException("Errore nella lettura dei messaggi: " + e.getMessage(), e);
+        }
+    }
+
+    public List<PecMessageSummaryDto> searchMessages(String folderName, String query) {
+        log.info("Searching PEC messages in folder '{}' with query='{}'", folderName, query);
+        try (Store store = openStore()) {
+            Folder folder = store.getFolder(folderName);
+            folder.open(Folder.READ_ONLY);
+            try {
+                UIDFolder uidFolder = (UIDFolder) folder;
+                SearchTerm term = new OrTerm(new SearchTerm[]{
+                    new SubjectTerm(query),
+                    new FromStringTerm(query),
+                    new BodyTerm(query)
+                });
+                Message[] messages = folder.search(term);
+                List<PecMessageSummaryDto> result = new ArrayList<>();
+                for (int i = messages.length - 1; i >= 0; i--) {
+                    Message msg = messages[i];
+                    result.add(toSummaryDto(uidFolder.getUID(msg), folderName, msg));
+                }
+                log.info("Search in folder '{}' for '{}' returned {} messages", folderName, query, result.size());
+                return result;
+            } finally {
+                folder.close(false);
+            }
+        } catch (MessagingException e) {
+            log.error("Error searching PEC messages in folder '{}': {}", folderName, e.getMessage(), e);
+            throw new RuntimeException("Errore nella ricerca dei messaggi: " + e.getMessage(), e);
         }
     }
 

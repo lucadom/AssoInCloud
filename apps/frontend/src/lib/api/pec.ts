@@ -53,6 +53,21 @@ export async function fetchPecMessages(
   return res.json();
 }
 
+/** Search messages in a folder by subject, sender, or body text. */
+export async function searchPecMessages(
+  folder: string,
+  query: string
+): Promise<PecMessageSummary[]> {
+  logger.info("Searching PEC messages", { folder, query });
+  const params = new URLSearchParams({ folder, query });
+  const res = await authFetch(`/pec/messages/search?${params}`);
+  if (!res.ok) {
+    logger.error("Failed to search PEC messages", { folder, status: res.status });
+    throw new Error("Errore nella ricerca dei messaggi");
+  }
+  return res.json();
+}
+
 /** Fetch the full content of a single message. Pass envelope=true to view the raw PEC transport envelope instead of the extracted inner message. */
 export async function fetchPecMessage(
   folder: string,

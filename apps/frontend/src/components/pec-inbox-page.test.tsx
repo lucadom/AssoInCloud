@@ -10,6 +10,7 @@ vi.mock("@/lib/api/pec", () => ({
   fetchPecMessages: vi.fn(),
   fetchPecMessage: vi.fn(),
   setPecReadStatus: vi.fn(),
+  searchPecMessages: vi.fn(),
   isPecNotConfiguredError: vi.fn().mockImplementation((e: unknown) => {
     return e instanceof Error && (e as Error & { notConfigured?: boolean }).notConfigured === true;
   }),
@@ -26,7 +27,11 @@ vi.mock("./pec/folder-list", () => ({
 }));
 
 vi.mock("./pec/message-list", () => ({
-  MessageList: () => <div data-testid="message-list" />,
+  MessageList: ({ hasMore, onLoadMore }: { hasMore?: boolean; onLoadMore?: () => void }) => (
+    <div data-testid="message-list">
+      {hasMore && <button onClick={onLoadMore}>Carica altri messaggi</button>}
+    </div>
+  ),
 }));
 
 vi.mock("./pec/message-viewer", () => ({
@@ -36,17 +41,19 @@ vi.mock("./pec/message-viewer", () => ({
 import * as pecApi from "@/lib/api/pec";
 const mockFetchFolders = vi.mocked(pecApi.fetchPecFolders);
 const mockFetchMessages = vi.mocked(pecApi.fetchPecMessages);
+const mockSearchMessages = vi.mocked(pecApi.searchPecMessages);
 const mockIsPecNotConfigured = vi.mocked(pecApi.isPecNotConfiguredError);
 
 const folders: PecFolder[] = [
-  { name: "INBOX", fullName: "INBOX", unreadCount: 2 },
-  { name: "Sent", fullName: "Sent", unreadCount: 0 },
+  { name: "INBOX", fullName: "INBOX", unreadCount: 2, messageCount: 10 },
+  { name: "Sent", fullName: "Sent", unreadCount: 0, messageCount: 5 },
 ];
 
 describe("PecInboxPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetchMessages.mockResolvedValue([]);
+    mockSearchMessages.mockResolvedValue([]);
     mockIsPecNotConfiguredError(false);
   });
 
@@ -112,6 +119,87 @@ describe("PecInboxPage", () => {
       expect(notifications.show).toHaveBeenCalledWith(
         expect.objectContaining({ color: "red" })
       );
+    });
+  });
+
+  it("should show load more button when a full page is returned", async () => {
+    const fullPage = Array.from({ length: 25 }, (_, i) => ({
+      uid: i + 1,
+      folder: "INBOX",
+      from: `mittente${i}@example.com`,
+      subject: `Messaggio ${i}`,
+      date: "2024-01-01T00:00:00Z",
+      read: false,
+    }));
+    mockFetchFolders.mockResolvedValue(folders);
+    mockFetchMessages.mockResolvedValue(fullPage);
+    render(
+      <TestWrapper>
+        <PecInboxPage />
+      </TestWrapper>
+    );
+    await waitFor(() => {
+      expect(screen.getByText("Carica altri messaggi")).toBeInTheDocument();
+    });
+  });
+
+  it("should not show load more button when partial page is returned", async () => {
+    const partialPage = Array.from({ length: 10 }, (_, i) => ({
+      uid: i + 1,
+      folder: "INBOX",
+      from: `mittente${i}@example.com`,
+      subject: `Messaggio ${i}`,
+      date: "2024-01-01T00:00:00Z",
+      read: false,
+    }));
+    mockFetchFolders.mockResolvedValue(folders);
+    mockFetchMessages.mockResolvedValue(partialPage);
+    render(
+      <TestWrapper>
+        <PecInboxPage />
+      </TestWrapper>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("message-list")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Carica altri messaggi")).not.toBeInTheDocument();
+  });
+
+  it("should fetch next page when load more is clicked", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    const fullPage = Array.from({ length: 25 }, (_, i) => ({
+      uid: i + 1,
+      folder: "INBOX",
+      from: `mittente${i}@example.com`,
+      subject: `Messaggio ${i}`,
+      date: "2024-01-01T00:00:00Z",
+      read: false,
+    }));
+    mockFetchFolders.mockResolvedValue(folders);
+    mockFetchMessages.mockResolvedValueOnce(fullPage).mockResolvedValueOnce([]);
+    render(
+      <TestWrapper>
+        <PecInboxPage />
+      </TestWrapper>
+    );
+    await waitFor(() => {
+      expect(screen.getByText("Carica altri messaggi")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Carica altri messaggi"));
+    await waitFor(() => {
+      expect(mockFetchMessages).toHaveBeenCalledWith("INBOX", 1, 25);
+    });
+  });
+
+  it("should render the search input", async () => {
+    mockFetchFolders.mockResolvedValue(folders);
+    render(
+      <TestWrapper>
+        <PecInboxPage />
+      </TestWrapper>
+    );
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/cerca per oggetto/i)).toBeInTheDocument();
     });
   });
 });

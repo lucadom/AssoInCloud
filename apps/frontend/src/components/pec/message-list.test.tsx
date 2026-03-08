@@ -92,4 +92,56 @@ describe("MessageList", () => {
     );
     expect(screen.getByText("(mittente sconosciuto)")).toBeInTheDocument();
   });
+
+  it("should show load more button when hasMore is true", () => {
+    const onLoadMore = vi.fn();
+    render(
+      <TestWrapper>
+        <MessageList
+          messages={messages}
+          selectedUid={null}
+          onSelect={onSelect}
+          onToggleRead={onToggleRead}
+          hasMore={true}
+          loadingMore={false}
+          onLoadMore={onLoadMore}
+        />
+      </TestWrapper>
+    );
+    expect(screen.getByText("Carica altri messaggi")).toBeInTheDocument();
+  });
+
+  it("should not show load more button when hasMore is false", () => {
+    render(
+      <TestWrapper>
+        <MessageList
+          messages={messages}
+          selectedUid={null}
+          onSelect={onSelect}
+          onToggleRead={onToggleRead}
+          hasMore={false}
+        />
+      </TestWrapper>
+    );
+    expect(screen.queryByText("Carica altri messaggi")).not.toBeInTheDocument();
+  });
+
+  it("should call onLoadMore when load more button is clicked", () => {
+    const onLoadMore = vi.fn();
+    render(
+      <TestWrapper>
+        <MessageList
+          messages={messages}
+          selectedUid={null}
+          onSelect={onSelect}
+          onToggleRead={onToggleRead}
+          hasMore={true}
+          loadingMore={false}
+          onLoadMore={onLoadMore}
+        />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByText("Carica altri messaggi"));
+    expect(onLoadMore).toHaveBeenCalledOnce();
+  });
 });
