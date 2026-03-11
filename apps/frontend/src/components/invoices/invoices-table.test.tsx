@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import { InvoicesTable } from "./invoices-table";
+import { InvoicesTable, dateRangeFilterFn } from "./invoices-table";
 import { TestWrapper } from "@/test-utils";
 import type { Invoice } from "@/types";
 
@@ -130,5 +130,68 @@ describe("InvoicesTable", () => {
     expect(viewButtons.length).toBe(3);
     expect(editButtons.length).toBe(3);
     expect(deleteButtons.length).toBe(3);
+  });
+});
+
+describe("dateRangeFilterFn", () => {
+  function makeRow(dateStr: string) {
+    return { getValue: (_id: string) => new Date(dateStr) };
+  }
+
+  it("should return true when no filter is set (both null)", () => {
+    const row = makeRow("2024-06-15");
+    expect(dateRangeFilterFn(row, "date", [null, null])).toBe(true);
+  });
+
+  it("should return true when filterValue is undefined", () => {
+    const row = makeRow("2024-06-15");
+    expect(dateRangeFilterFn(row, "date", undefined as unknown as [null, null])).toBe(true);
+  });
+
+  it("should filter out rows before the from date", () => {
+    const row = makeRow("2024-05-31");
+    const from = new Date("2024-06-01");
+    expect(dateRangeFilterFn(row, "date", [from, null])).toBe(false);
+  });
+
+  it("should include rows on the from date", () => {
+    const row = makeRow("2024-06-01");
+    const from = new Date("2024-06-01");
+    expect(dateRangeFilterFn(row, "date", [from, null])).toBe(true);
+  });
+
+  it("should filter out rows after the to date (end of day)", () => {
+    const row = makeRow("2024-06-16");
+    const to = new Date("2024-06-15");
+    expect(dateRangeFilterFn(row, "date", [null, to])).toBe(false);
+  });
+
+  it("should include rows on the to date (end of day boundary)", () => {
+    const to = new Date("2024-06-15");
+    const endOfDay = new Date("2024-06-15T23:59:59.999");
+    const rowAtEndOfDay = { getValue: (_id: string) => endOfDay };
+    expect(dateRangeFilterFn(rowAtEndOfDay, "date", [null, to])).toBe(true);
+  });
+
+  it("should include rows in the from-to range", () => {
+    const row = makeRow("2024-06-10");
+    const from = new Date("2024-06-01");
+    const to = new Date("2024-06-30");
+    expect(dateRangeFilterFn(row, "date", [from, to])).toBe(true);
+  });
+
+  it("should exclude rows outside the from-to range", () => {
+    const beforeRange = makeRow("2024-05-31");
+    const afterRange = makeRow("2024-07-01");
+    const from = new Date("2024-06-01");
+    const to = new Date("2024-06-30");
+    expect(dateRangeFilterFn(beforeRange, "date", [from, to])).toBe(false);
+    expect(dateRangeFilterFn(afterRange, "date", [from, to])).toBe(false);
+  });
+
+  it("should return true when cell value is not a Date", () => {
+    const row = { getValue: (_id: string) => "not-a-date" };
+    const from = new Date("2024-06-01");
+    expect(dateRangeFilterFn(row, "date", [from, null])).toBe(true);
   });
 });

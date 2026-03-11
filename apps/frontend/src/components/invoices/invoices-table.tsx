@@ -90,6 +90,27 @@ function getPresetRange(preset: DatePreset): [Date | null, Date | null] {
   }
 }
 
+export function dateRangeFilterFn(
+  row: { getValue: (id: string) => unknown },
+  columnId: string,
+  filterValue: [Date | null, Date | null],
+): boolean {
+  const [from, to] = filterValue ?? [null, null];
+  if (!from && !to) return true;
+  const cellDate = row.getValue(columnId);
+  if (!(cellDate instanceof Date)) return true;
+  if (from) {
+    const startDate = new Date(from);
+    if (cellDate < startDate) return false;
+  }
+  if (to) {
+    const endOfDay = new Date(to);
+    endOfDay.setHours(23, 59, 59, 999);
+    if (cellDate > endOfDay) return false;
+  }
+  return true;
+}
+
 export function InvoicesTable({
   invoices,
   onView,
@@ -144,6 +165,7 @@ export function InvoicesTable({
         sortingFn: "datetime",
         Cell: ({ row }) => formatDate(row.original.date),
         filterVariant: "date-range",
+        filterFn: dateRangeFilterFn,
       },
       {
         accessorFn: (row) => row.supplier.name,
