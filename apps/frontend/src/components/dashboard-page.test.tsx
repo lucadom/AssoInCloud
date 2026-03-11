@@ -163,6 +163,23 @@ describe("DashboardPage", () => {
     });
   });
 
+  it("should display all members sharing the same next birthday", async () => {
+    const sharedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-20`;
+    vi.mocked(membersApi.fetchMembers).mockResolvedValue([
+      { id: "m1", lastName: "Rossi", firstName: "Marco", fiscalCode: "RSSMRC80A01H501U", birthDate: sharedDate },
+      { id: "m3", lastName: "Verdi", firstName: "Luca", fiscalCode: "VRDLCU85A01H501U", birthDate: sharedDate },
+    ]);
+    render(
+      <TestWrapper>
+        <DashboardPage />
+      </TestWrapper>
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/Marco/)).toBeInTheDocument();
+      expect(screen.getByText(/Luca/)).toBeInTheDocument();
+    });
+  });
+
   it("should show empty birthday message when no members have birthDate", async () => {
     vi.mocked(membersApi.fetchMembers).mockResolvedValue([
       { id: "m2", lastName: "Bianchi", firstName: "Anna", fiscalCode: "BNCH123" },

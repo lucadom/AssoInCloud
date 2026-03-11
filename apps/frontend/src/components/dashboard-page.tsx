@@ -108,7 +108,7 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "long" });
 }
 
-function getNextBirthday(members: Member[]): { member: Member; days: number; nextDate: Date; turningAge: number } | null {
+function getNextBirthdays(members: Member[]): { entries: Array<{ member: Member; turningAge: number }>; days: number; nextDate: Date } | null {
   const withBirthday = members.filter((m) => m.birthDate);
   if (!withBirthday.length) return null;
 
@@ -125,7 +125,14 @@ function getNextBirthday(members: Member[]): { member: Member; days: number; nex
     return { member: m, days: daysUntilBirthday(m.birthDate!), nextDate: next, turningAge };
   });
   ranked.sort((a, b) => a.days - b.days);
-  return ranked[0];
+
+  const minDays = ranked[0].days;
+  const tied = ranked.filter((r) => r.days === minDays);
+  return {
+    entries: tied.map(({ member, turningAge }) => ({ member, turningAge })),
+    days: minDays,
+    nextDate: ranked[0].nextDate,
+  };
 }
 
 // --- Chart tooltip ---
@@ -331,7 +338,7 @@ export function DashboardPage() {
     };
   });
 
-  const nextBirthday = getNextBirthday(members);
+  const nextBirthday = getNextBirthdays(members);
 
   // Responsive onLayoutChange fires with (currentLayout, allLayouts) — update all breakpoints
   // Do NOT save here: this also fires on mount and would overwrite localStorage before loadLayouts restores data.
@@ -435,12 +442,14 @@ export function DashboardPage() {
     "compleanno": (
       <StatCard icon={IconCake} color="pink" label="Prossimo compleanno" loading={loading}>
         {nextBirthday ? (
-          <>
-            <Text fw={700} size="xl">
-              {nextBirthday.member.firstName} {nextBirthday.member.lastName} ({nextBirthday.turningAge} anni)
-            </Text>
-            <Text size="sm" c="dimmed">
-              {nextBirthday.nextDate.toLocaleDateString("it-IT", { weekday: "long" })} {formatDate(nextBirthday.member.birthDate!)}
+          <>            
+            {nextBirthday.entries.map(({ member, turningAge }) => (
+              <Text fw={700} size="xl" key={member.id}>
+                {member.firstName} {member.lastName} ({turningAge} anni)
+              </Text>
+            ))}
+            <Text size="sm" c="dimmed" mb={4}>
+              {nextBirthday.nextDate.toLocaleDateString("it-IT", { weekday: "long" })} {formatDate(nextBirthday.entries[0].member.birthDate!)}
               {nextBirthday.days === 0
                 ? " — oggi! 🎂"
                 : nextBirthday.days === 1
