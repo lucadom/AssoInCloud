@@ -26,6 +26,8 @@ spring:
 
 assoincloud:
   password: ${ASSOINCLOUD_PASSWORD:}
+  documents:
+    root: ${ASSOINCLOUD_DOCUMENTS_ROOT:./data/documents}
 
 server:
   tomcat:

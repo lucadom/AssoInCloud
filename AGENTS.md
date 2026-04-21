@@ -27,6 +27,7 @@ The current domain models and features are:
 | Backup | — | Database backup/restore via API |
 | PEC inbox | — | Read-only IMAP access; stateless message access; IMAP config stored in `settings` table |
 | App settings | `AppSetting` | Key-value settings table; currently stores PEC IMAP configuration |
+| Documents (documenti) | — | File system–based document storage; folder/file CRUD; ZIP download; bulk select/move/delete/download |
 
 ---
 
@@ -94,6 +95,7 @@ user (e.g. `"Errore durante l'elaborazione del CSV"`).
 | PEC inbox | Casella PEC |
 | Folder | Cartella |
 | Unread | Da leggere |
+| Document | Documento |
 
 ---
 
@@ -294,6 +296,7 @@ src/
   - `/api/auth` — login/logout (unauthenticated)
   - `/api/pec` — read-only IMAP inbox (folders, messages, attachments)
   - `/api/settings` — application settings (currently PEC IMAP config)
+  - `/api/documents` — document storage (browse, folder/file CRUD, bulk operations, ZIP download)
 - CRUD: `GET`, `POST`, `PUT`, `DELETE` on resource endpoints.
 - File uploads: `POST` with `multipart/form-data`.
 - IDs are UUIDs (string).

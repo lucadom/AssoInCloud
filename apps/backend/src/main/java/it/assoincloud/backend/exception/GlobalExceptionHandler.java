@@ -7,6 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import it.assoincloud.backend.exception.DocumentConflictException;
+import it.assoincloud.backend.exception.DocumentNotFoundException;
+
 /**
  * Global exception handler for common errors.
  */
@@ -36,6 +39,16 @@ public class GlobalExceptionHandler {
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Errore durante l'operazione"));
+    }
+
+    @ExceptionHandler(DocumentNotFoundException.class)
+    public ResponseEntity<?> handleDocumentNotFound(DocumentNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(DocumentConflictException.class)
+    public ResponseEntity<?> handleDocumentConflict(DocumentConflictException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
     }
 
     private String extractMessage(Exception e) {

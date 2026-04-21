@@ -193,6 +193,7 @@ docker compose -f docker-compose.dev.yml up --build
 |-----------|-------------|----------|
 | `ASSOINCLOUD_DB_PATH` | Percorso del file SQLite | `./data/assoincloud.db` (locale) · `/data/assoincloud.db` (Docker) |
 | `ASSOINCLOUD_PASSWORD` | Password di accesso. Vuota = autenticazione disabilitata | _(vuota)_ |
+| `ASSOINCLOUD_DOCUMENTS_ROOT` | Directory radice per l'archiviazione documenti | `./data/documents` (locale) · `/data/documents` (Docker) |
 | `ASSOINCLOUD_PORT` | Porta esposta dall'host (solo Docker) | `80` |
 | `SERVER_PORT` | Porta interna Spring Boot (prod Docker) | `8080` |
 | `JAVA_OPTS` | Opzioni JVM | `-Xms128m -Xmx512m` |

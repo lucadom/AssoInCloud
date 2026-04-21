@@ -93,6 +93,7 @@ nella stessa directory, oppure inline al lancio.
 | `ASSOINCLOUD_PORT` | Porta esposta dall'host | `80` |
 | `ASSOINCLOUD_DB_PATH` | Percorso del file database SQLite dentro al container | `/data/assoincloud.db` |
 | `ASSOINCLOUD_PASSWORD` | Password di accesso all'applicazione. Se vuota, l'autenticazione è disabilitata | _(vuota)_ |
+| `ASSOINCLOUD_DOCUMENTS_ROOT` | Directory radice per l'archiviazione documenti dentro al container | `/data/documents` |
 | `JAVA_OPTS` | Opzioni JVM (memoria, GC, ecc.) | `-Xms128m -Xmx512m` |
 | `SERVER_PORT` | Porta interna del backend Spring Boot (coincide con la porta esposta al netto del mapping) | `8080` |
 

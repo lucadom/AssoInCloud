@@ -24,6 +24,7 @@ services:
     environment:
       ASSOINCLOUD_DB_PATH: /data/assoincloud.db
       ASSOINCLOUD_PASSWORD: "${ASSOINCLOUD_PASSWORD:-}"
+      ASSOINCLOUD_DOCUMENTS_ROOT: /data/documents
       JAVA_OPTS: "${JAVA_OPTS:--Xms128m -Xmx512m}"
     volumes:
       # Mount the backend source for hot-reload via devtools

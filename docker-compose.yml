@@ -16,6 +16,9 @@ services:
       # to log in. When empty, no authentication is required.
       ASSOINCLOUD_PASSWORD: "${ASSOINCLOUD_PASSWORD:-}"
 
+      # Root directory for document storage inside the container.
+      ASSOINCLOUD_DOCUMENTS_ROOT: "${ASSOINCLOUD_DOCUMENTS_ROOT:-/data/documents}"
+
       # Internal Spring Boot port (normally you don't need to change this)
       SERVER_PORT: "${SERVER_PORT:-8080}"
 
