@@ -7,14 +7,16 @@ import {
   type MRT_ColumnDef,
 } from "mantine-react-table";
 import { MRT_Localization_IT } from "mantine-react-table/locales/it/index.esm.mjs";
-import { ActionIcon, Group, Text, Tooltip } from "@mantine/core";
-import { IconEdit, IconTrash } from "@tabler/icons-react";
+import { ActionIcon, Badge, Group, Text, Tooltip } from "@mantine/core";
+import { IconEdit, IconRefresh, IconTrash } from "@tabler/icons-react";
 import type { Member } from "@/types";
 
 interface MembersTableProps {
   members: Member[];
   onEdit: (member: Member) => void;
   onDelete: (member: Member) => void;
+  onRenew: (member: Member) => void;
+  renewingMemberId?: string;
 }
 
 function formatDate(dateStr: string | null): string {
@@ -23,7 +25,19 @@ function formatDate(dateStr: string | null): string {
   return d.toLocaleDateString("it-IT");
 }
 
-export function MembersTable({ members, onEdit, onDelete }: MembersTableProps) {
+function StatusBadge({ active }: { active: boolean }) {
+  return (
+    <Badge
+      size="sm"
+      color={active ? "green" : "gray"}
+      variant="light"
+    >
+      {active ? "Attivo" : "Inattivo"}
+    </Badge>
+  );
+}
+
+export function MembersTable({ members, onEdit, onDelete, onRenew, renewingMemberId }: MembersTableProps) {
   const columns = useMemo<MRT_ColumnDef<Member>[]>(
     () => [
       {
@@ -40,6 +54,12 @@ export function MembersTable({ members, onEdit, onDelete }: MembersTableProps) {
         accessorKey: "fiscalCode",
         header: "Codice Fiscale",
         size: 140,
+      },
+      {
+        accessorKey: "active",
+        header: "Stato",
+        size: 100,
+        Cell: ({ cell }) => <StatusBadge active={cell.getValue<boolean>()} />,
       },
       {
         accessorKey: "birthDate",
@@ -98,6 +118,19 @@ export function MembersTable({ members, onEdit, onDelete }: MembersTableProps) {
     },
     renderRowActions: ({ row }) => (
       <Group gap="xs" justify="center" wrap="nowrap">
+        {!row.original.active && (
+          <Tooltip label="Rinnova iscrizione">
+            <ActionIcon
+              variant="subtle"
+              color="blue"
+              aria-label="Rinnova iscrizione"
+              onClick={() => onRenew(row.original)}
+              loading={renewingMemberId === row.original.id}
+            >
+              <IconRefresh size={16} />
+            </ActionIcon>
+          </Tooltip>
+        )}
         <Tooltip label="Modifica">
           <ActionIcon
             variant="subtle"
@@ -123,7 +156,7 @@ export function MembersTable({ members, onEdit, onDelete }: MembersTableProps) {
     displayColumnDefOptions: {
       "mrt-row-actions": {
         header: "Azioni",
-        size: 120,
+        size: 180,
       },
     },
     renderBottomToolbarCustomActions: ({ table }) => {

@@ -10,6 +10,8 @@ export interface Member {
   city: string | null;
   phone: string | null;
   membershipDate: string | null;
+  membershipYears: number[];
+  active: boolean;
 }
 
 /** Payload for creating/updating a member */
@@ -23,4 +25,5 @@ export interface MemberFormData {
   city?: string;
   phone?: string;
   membershipDate?: string;
+  membershipYears?: number[];
 }

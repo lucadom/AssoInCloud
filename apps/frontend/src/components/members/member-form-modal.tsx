@@ -8,6 +8,7 @@ import {
   Group,
   Stack,
   Grid,
+  TagsInput,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
@@ -23,6 +24,7 @@ export interface MemberFormValues {
   city: string;
   phone: string;
   membershipDate: Date | null;
+  membershipYears: string[];
 }
 
 interface MemberFormModalProps {
@@ -51,6 +53,7 @@ export function MemberFormModal({
       city: "",
       phone: "",
       membershipDate: new Date(),
+      membershipYears: [],
     },
     validate: {
       lastName: (v) => (v.trim().length > 0 ? null : "Il cognome è obbligatorio"),
@@ -73,6 +76,9 @@ export function MemberFormModal({
           city: member.city || "",
           phone: member.phone || "",
           membershipDate: member.membershipDate ? new Date(member.membershipDate) : null,
+          membershipYears: [...member.membershipYears]
+            .sort((a, b) => a - b)
+            .map((year) => String(year)),
         });
       } else {
         form.setValues({
@@ -85,6 +91,7 @@ export function MemberFormModal({
           city: "",
           phone: "",
           membershipDate: new Date(),
+          membershipYears: [],
         });
         form.resetDirty();
       }
@@ -180,6 +187,15 @@ export function MemberFormModal({
             clearable
             {...form.getInputProps("membershipDate")}
           />
+
+          {member && (
+            <TagsInput
+              label="Anni di iscrizione"
+              placeholder="Aggiungi anno e premi invio"
+              description="Inserisci anni a 4 cifre (es. 2021, 2024)."
+              {...form.getInputProps("membershipYears")}
+            />
+          )}
 
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose}>

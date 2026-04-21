@@ -157,6 +157,27 @@ class MemberControllerTest {
     }
 
     @Test
+    void shouldUpdateMembershipYearsFromPayload() throws Exception {
+        String json = """
+            {
+                "lastName": "Rossi",
+                "firstName": "Mario",
+                "fiscalCode": "RSSMRA80A01H501U",
+                "membershipYears": [2021, 2024]
+            }
+            """;
+
+        mockMvc.perform(put("/api/members/" + testMember.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.membershipYears", hasSize(2)))
+                .andExpect(jsonPath("$.membershipYears", hasItem(2021)))
+                .andExpect(jsonPath("$.membershipYears", hasItem(2024)))
+                .andExpect(jsonPath("$.active", is(false)));
+    }
+
+    @Test
     void shouldDeleteMember() throws Exception {
         mockMvc.perform(delete("/api/members/" + testMember.getId()))
                 .andExpect(status().isNoContent());

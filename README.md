@@ -11,7 +11,7 @@ consultare la casella PEC dell'associazione.
 
 | Funzionalità | Descrizione |
 |-------------|-------------|
-| **Soci** | Anagrafica con codice fiscale; importazione CSV e esportazione XLSX |
+| **Soci** | Anagrafica con codice fiscale; importazione CSV e esportazione XLSX; tracciamento anno iscrizione; rinnovo iscrizione (annuale, da calendario); filtro e esportazione soci attivi |
 | **Fatture** | Importazione da CSV e da file FatturaPA XML/P7M; visualizzazione con dettaglio righe e allegati |
 | **Fornitori** | Gestione anagrafica; creati automaticamente dall'importazione fatture |
 | **Prodotti** | Ricerca nel catalogo prodotti |

@@ -17,6 +17,8 @@ const members: Member[] = [
     city: "Roma",
     phone: "3331234567",
     membershipDate: "2020-01-10",
+    membershipYears: [2020, 2024],
+    active: false,
   },
   {
     id: "m2",
@@ -29,12 +31,15 @@ const members: Member[] = [
     city: null,
     phone: null,
     membershipDate: null,
+    membershipYears: [2026],
+    active: true,
   },
 ];
 
 describe("MembersTable", () => {
   const onEdit = vi.fn();
   const onDelete = vi.fn();
+  const onRenew = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,7 +48,7 @@ describe("MembersTable", () => {
   it("should render member names", () => {
     render(
       <TestWrapper>
-        <MembersTable members={members} onEdit={onEdit} onDelete={onDelete} />
+        <MembersTable members={members} onEdit={onEdit} onDelete={onDelete} onRenew={onRenew} />
       </TestWrapper>
     );
     expect(screen.getByText("Rossi")).toBeInTheDocument();
@@ -55,7 +60,7 @@ describe("MembersTable", () => {
   it("should render fiscal codes", () => {
     render(
       <TestWrapper>
-        <MembersTable members={members} onEdit={onEdit} onDelete={onDelete} />
+        <MembersTable members={members} onEdit={onEdit} onDelete={onDelete} onRenew={onRenew} />
       </TestWrapper>
     );
     expect(screen.getByText("RSSMRC80A01H501U")).toBeInTheDocument();
@@ -65,7 +70,7 @@ describe("MembersTable", () => {
   it("should render with empty members list", () => {
     render(
       <TestWrapper>
-        <MembersTable members={[]} onEdit={onEdit} onDelete={onDelete} />
+        <MembersTable members={[]} onEdit={onEdit} onDelete={onDelete} onRenew={onRenew} />
       </TestWrapper>
     );
     // With no members, the table should render without errors
@@ -75,7 +80,7 @@ describe("MembersTable", () => {
   it("should render column headers", () => {
     render(
       <TestWrapper>
-        <MembersTable members={members} onEdit={onEdit} onDelete={onDelete} />
+        <MembersTable members={members} onEdit={onEdit} onDelete={onDelete} onRenew={onRenew} />
       </TestWrapper>
     );
     expect(screen.getByText("Cognome")).toBeInTheDocument();

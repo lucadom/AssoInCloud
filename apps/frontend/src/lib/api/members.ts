@@ -13,6 +13,17 @@ export async function fetchMembers(): Promise<Member[]> {
   return res.json();
 }
 
+/** Fetch active members (current year) */
+export async function fetchActiveMembers(): Promise<Member[]> {
+  logger.info("Fetching active members");
+  const res = await authFetch("/members/active");
+  if (!res.ok) {
+    logger.error("Failed to fetch active members", res.status);
+    throw new Error("Errore nel caricamento dei soci attivi");
+  }
+  return res.json();
+}
+
 /**  Get a single member by ID */
 export async function fetchMember(id: string): Promise<Member> {
   const res = await authFetch(`/members/${id}`);
@@ -68,6 +79,21 @@ export async function deleteMember(id: string): Promise<void> {
   }
 }
 
+/** Renew membership for a member for the current year */
+export async function renewMembership(id: string): Promise<Member> {
+  logger.info("Renewing membership for member", { id });
+  const res = await authFetch(`/members/${id}/renew`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    logger.error("Failed to renew membership", { id, status: res.status, error: body?.error });
+    throw new Error(body?.error ?? "Errore durante il rinnovo dell'iscrizione");
+  }
+  return res.json();
+}
+
 /** Upload a CSV file with members to import/update */
 export async function uploadMembersCsv(file: File): Promise<ImportResult> {
   logger.info("Uploading members CSV", { filename: file.name });
@@ -102,6 +128,25 @@ export async function exportMembersXlsx(): Promise<Blob> {
     const body = await res.json().catch(() => null);
     logger.error("Failed to export members XLSX", { status: res.status, error: body?.error });
     throw new Error(body?.error ?? "Errore nell'esportazione dei soci");
+  }
+
+  return res.blob();
+}
+
+/** Export active members as XLSX */
+export async function exportActiveMembersXlsx(): Promise<Blob> {
+  logger.info("Exporting active members as XLSX");
+  const res = await authFetch("/members/export-xlsx-active", {
+    method: "GET",
+    headers: {
+      Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    logger.error("Failed to export active members XLSX", { status: res.status, error: body?.error });
+    throw new Error(body?.error ?? "Errore nell'esportazione dei soci attivi");
   }
 
   return res.blob();

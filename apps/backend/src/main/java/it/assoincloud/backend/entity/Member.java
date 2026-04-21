@@ -2,7 +2,10 @@ package it.assoincloud.backend.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Year;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import it.assoincloud.backend.converter.LocalDateTimeStringConverter;
 import jakarta.persistence.Column;
@@ -11,6 +14,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -57,6 +61,9 @@ public class Member {
     @Convert(converter = LocalDateTimeStringConverter.class)
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "member")
+    private Set<MembershipYear> membershipYears = new HashSet<>();
 
     public Member() {}
 
@@ -116,6 +123,20 @@ public class Member {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Set<MembershipYear> getMembershipYears() { return membershipYears; }
+    public void setMembershipYears(Set<MembershipYear> membershipYears) { this.membershipYears = membershipYears; }
+
+    /**
+     * Determines if this member is active for the current year.
+     * @return true if the member has the current year in their membership years, false otherwise.
+     */
+    public boolean isActive() {
+        int currentYear = Year.now().getValue();
+        return membershipYears.stream()
+            .map(MembershipYear::getYear)
+            .anyMatch(year -> year == currentYear);
+    }
 
     @Override
     public boolean equals(Object o) {

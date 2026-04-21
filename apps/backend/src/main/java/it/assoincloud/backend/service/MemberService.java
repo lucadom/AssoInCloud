@@ -5,8 +5,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -20,7 +24,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import it.assoincloud.backend.dto.ImportResultDto;
 import it.assoincloud.backend.entity.Member;
+import it.assoincloud.backend.entity.MembershipYear;
 import it.assoincloud.backend.repository.MemberRepository;
+import it.assoincloud.backend.repository.MembershipYearRepository;
 
 @Service
 @Transactional
@@ -31,15 +37,23 @@ public class MemberService {
     private static final DateTimeFormatter EXPORT_DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final MemberRepository memberRepository;
+    private final MembershipYearRepository membershipYearRepository;
 
-    public MemberService(MemberRepository memberRepository) {
+    public MemberService(MemberRepository memberRepository, MembershipYearRepository membershipYearRepository) {
         this.memberRepository = memberRepository;
+        this.membershipYearRepository = membershipYearRepository;
     }
 
     @Transactional(readOnly = true)
     public List<Member> findAll() {
         log.info("Fetching all members");
         return memberRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Member> findAllActive() {
+        log.info("Fetching all active members");
+        return memberRepository.findAllActive();
     }
 
     @Transactional(readOnly = true)
@@ -50,20 +64,34 @@ public class MemberService {
     }
 
     public Member create(Member member) {
+        return create(member, null);
+    }
+
+    public Member create(Member member, List<Integer> membershipYears) {
         if (memberRepository.existsByFiscalCode(member.getFiscalCode())) {
             log.warn("Cannot create member: fiscal code already exists: {}", member.getFiscalCode());
             throw new IllegalArgumentException("Socio già esistente");
         }
         log.info("Creating member: {} {} (fiscalCode={})", member.getFirstName(), member.getLastName(), member.getFiscalCode());
         Member saved = memberRepository.save(member);
+        if (membershipYears != null) {
+            syncMembershipYears(saved, membershipYears);
+        }
         log.info("Member created with id: {}", saved.getId());
         return saved;
     }
 
     public Member update(String id, Member updates) {
+        return update(id, updates, null);
+    }
+
+    public Member update(String id, Member updates, List<Integer> membershipYears) {
         log.info("Updating member id: {}", id);
         Member existing = findById(id);
         updateFields(existing, updates);
+        if (membershipYears != null) {
+            syncMembershipYears(existing, membershipYears);
+        }
         return memberRepository.save(existing);
     }
 
@@ -72,11 +100,50 @@ public class MemberService {
         memberRepository.deleteById(id);
     }
 
+    /**
+     * Record membership renewal for a member for the current calendar year.
+     * If the member already has the current year recorded, this is idempotent and returns success.
+     * 
+     * @param memberId the member ID
+     * @return the updated Member with all membership years
+     * @throws IllegalArgumentException if the member does not exist
+     */
+    public Member renewMembership(String memberId) {
+        Member member = findById(memberId);
+        int currentYear = Year.now().getValue();
+        
+        log.info("Processing renewal for member id: {} for year: {}", memberId, currentYear);
+        
+        // Check if member already has the current year
+        if (membershipYearRepository.existsByMemberIdAndYear(memberId, currentYear)) {
+            log.debug("Member {} already has membership year {}, no-op renewal", memberId, currentYear);
+            return member;
+        }
+        
+        // Create and save new membership year entry
+        MembershipYear membershipYear = new MembershipYear(member, currentYear);
+        membershipYearRepository.save(membershipYear);
+        member.getMembershipYears().add(membershipYear);
+        
+        log.info("Successfully renewed membership for member id: {} for year: {}", memberId, currentYear);
+        return member;
+    }
+
     @Transactional(readOnly = true)
     public byte[] exportXlsx() {
         List<Member> members = memberRepository.findAll(Sort.by("lastName").ascending().and(Sort.by("firstName").ascending()));
         log.info("Exporting {} members to XLSX", members.size());
+        return generateXlsxBytes(members);
+    }
 
+    @Transactional(readOnly = true)
+    public byte[] exportActiveXlsx() {
+        List<Member> members = memberRepository.findAllActive();
+        log.info("Exporting {} active members to XLSX", members.size());
+        return generateXlsxBytes(members);
+    }
+
+    private byte[] generateXlsxBytes(List<Member> members) {
         try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Soci");
             Row header = sheet.createRow(0);
@@ -89,6 +156,7 @@ public class MemberService {
             header.createCell(6).setCellValue("Citta");
             header.createCell(7).setCellValue("Telefono");
             header.createCell(8).setCellValue("Data accettazione");
+            header.createCell(9).setCellValue("Anni di iscrizione");
 
             int rowIndex = 1;
             for (Member member : members) {
@@ -102,6 +170,12 @@ public class MemberService {
                 row.createCell(6).setCellValue(nullToEmpty(member.getCity()));
                 row.createCell(7).setCellValue(nullToEmpty(member.getPhone()));
                 row.createCell(8).setCellValue(formatDate(member.getMembershipDate()));
+                String yearsStr = member.getMembershipYears().stream()
+                    .map(my -> my.getYear().toString())
+                    .sorted()
+                    .reduce((a, b) -> a + "," + b)
+                    .orElse("");
+                row.createCell(9).setCellValue(yearsStr);
             }
 
             workbook.write(output);
@@ -219,6 +293,44 @@ public class MemberService {
         if (source.getCity() != null) target.setCity(source.getCity());
         if (source.getPhone() != null) target.setPhone(source.getPhone());
         if (source.getMembershipDate() != null) target.setMembershipDate(source.getMembershipDate());
+    }
+
+    private void syncMembershipYears(Member member, List<Integer> requestedYears) {
+        Set<Integer> normalizedYears = normalizeMembershipYears(requestedYears);
+        Set<Integer> existingYears = member.getMembershipYears().stream()
+            .map(MembershipYear::getYear)
+            .collect(Collectors.toSet());
+
+        // Remove years that are no longer present in the request.
+        for (Integer year : existingYears) {
+            if (!normalizedYears.contains(year)) {
+                membershipYearRepository.deleteByMemberIdAndYear(member.getId(), year);
+            }
+        }
+
+        member.getMembershipYears().removeIf(my -> !normalizedYears.contains(my.getYear()));
+
+        // Add new years introduced by the request.
+        for (Integer year : normalizedYears) {
+            if (!existingYears.contains(year)) {
+                MembershipYear membershipYear = membershipYearRepository.save(new MembershipYear(member, year));
+                member.getMembershipYears().add(membershipYear);
+            }
+        }
+    }
+
+    private Set<Integer> normalizeMembershipYears(List<Integer> years) {
+        Set<Integer> normalized = new HashSet<>();
+        int maxYear = Year.now().getValue() + 20;
+
+        for (Integer year : years) {
+            if (year == null || year < 1900 || year > maxYear) {
+                throw new IllegalArgumentException("Anno di iscrizione non valido");
+            }
+            normalized.add(year);
+        }
+
+        return normalized;
     }
 
     private String trim(String s) {

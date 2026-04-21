@@ -48,6 +48,14 @@ public class MemberController {
                 .toList();
     }
 
+    @GetMapping("/active")
+    public List<MemberDto> listActive() {
+        log.debug("Fetching active members");
+        return memberService.findAllActive().stream()
+                .map(MemberDto::from)
+                .toList();
+    }
+
     @GetMapping("/{id}")
     public MemberDto get(@PathVariable String id) {
         return MemberDto.from(memberService.findById(id));
@@ -59,20 +67,37 @@ public class MemberController {
         Member member = new Member(data.lastName(), data.firstName(), data.fiscalCode());
         applyFormData(member, data);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(MemberDto.from(memberService.create(member)));
+                .body(MemberDto.from(memberService.create(member, data.membershipYears())));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable String id, @RequestBody MemberFormData data) {
         Member updates = new Member();
         applyFormData(updates, data);
-        return ResponseEntity.ok(MemberDto.from(memberService.update(id, updates)));
+        return ResponseEntity.ok(MemberDto.from(memberService.update(id, updates, data.membershipYears())));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {
         memberService.delete(id);
+    }
+
+    @PostMapping("/{id}/renew")
+    public ResponseEntity<?> renewMembership(@PathVariable String id) {
+        try {
+            log.info("Processing renewal request for member: {}", id);
+            Member member = memberService.renewMembership(id);
+            return ResponseEntity.ok(MemberDto.from(member));
+        } catch (IllegalArgumentException e) {
+            log.warn("Renewal failed for member {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Socio non trovato"));
+        } catch (Exception e) {
+            log.error("Renewal failed for member {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Errore durante il rinnovo dell'iscrizione"));
+        }
     }
 
     @PostMapping("/import-csv")
@@ -100,6 +125,23 @@ public class MemberController {
             log.error("XLSX member export failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Errore durante l'esportazione dei soci"));
+        }
+    }
+
+    @GetMapping("/export-xlsx-active")
+    public ResponseEntity<?> exportActiveXlsx() {
+        try {
+            log.info("Exporting active members to XLSX");
+            byte[] data = memberService.exportActiveXlsx();
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"soci_attivi.xlsx\"")
+                    .contentType(MediaType.parseMediaType(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(data);
+        } catch (Exception e) {
+            log.error("XLSX active member export failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Errore durante l'esportazione dei soci attivi"));
         }
     }
 
@@ -137,6 +179,7 @@ public class MemberController {
         String address,
         String city,
         String phone,
-        String membershipDate
+        String membershipDate,
+        List<Integer> membershipYears
     ) {}
 }

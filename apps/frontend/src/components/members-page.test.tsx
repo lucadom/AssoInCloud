@@ -7,11 +7,14 @@ import type { Member } from "@/types";
 
 vi.mock("@/lib/api/members", () => ({
   fetchMembers: vi.fn(),
+  fetchActiveMembers: vi.fn(),
   createMember: vi.fn(),
   updateMember: vi.fn(),
   deleteMember: vi.fn(),
+  renewMembership: vi.fn(),
   uploadMembersCsv: vi.fn(),
   exportMembersXlsx: vi.fn(),
+  exportActiveMembersXlsx: vi.fn(),
 }));
 
 vi.mock("@mantine/notifications", () => ({
@@ -45,8 +48,34 @@ const mockFetchMembers = vi.mocked(api.fetchMembers);
 const mockExportXlsx = vi.mocked(api.exportMembersXlsx);
 
 const members: Member[] = [
-  { id: "m1", lastName: "Rossi", firstName: "Marco", fiscalCode: "RSSMRC80A01H501U" },
-  { id: "m2", lastName: "Bianchi", firstName: "Anna", fiscalCode: "BNCHNN85E60D612C" },
+  {
+    id: "m1",
+    lastName: "Rossi",
+    firstName: "Marco",
+    fiscalCode: "RSSMRC80A01H501U",
+    birthDate: null,
+    birthPlace: null,
+    address: null,
+    city: null,
+    phone: null,
+    membershipDate: null,
+    membershipYears: [2024],
+    active: false,
+  },
+  {
+    id: "m2",
+    lastName: "Bianchi",
+    firstName: "Anna",
+    fiscalCode: "BNCHNN85E60D612C",
+    birthDate: null,
+    birthPlace: null,
+    address: null,
+    city: null,
+    phone: null,
+    membershipDate: null,
+    membershipYears: [2026],
+    active: true,
+  },
 ];
 
 describe("MembersPage", () => {

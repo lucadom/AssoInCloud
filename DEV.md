@@ -240,6 +240,28 @@ rm data/assoincloud.db
 
 ---
 
+## Membership Years Tracking
+
+The membership system uses **annual calendar-year tracking** (Jan 1 — Dec 31). Members have two states:
+
+- **Active**: has at least one entry for the current calendar year in `membership_years` table
+- **Inactive**: has no entry for the current year (may have entries for past years, supporting gap years)
+
+### Renewal
+
+Members can be renewed anytime via `POST /api/members/{id}/renew`:
+- Adds current calendar year if not already present (idempotent — safe to call multiple times)
+- Returns updated `Member` with `membershipYears` array and `active` boolean
+
+### Active Member Filtering and Export
+
+- `GET /api/members/active` — returns only members with current year
+- `GET /api/members/export-xlsx-active` — exports active members to XLSX file
+
+Renewal button is shown only for inactive members; after renewal, UI refreshes to reflect active status and updated membership years.
+
+---
+
 ## Convenzioni di sviluppo
 
 Consulta [AGENTS.md](AGENTS.md) per le convenzioni complete. In sintesi:

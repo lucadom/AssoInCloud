@@ -1,5 +1,7 @@
 package it.assoincloud.backend.dto;
 
+import java.util.List;
+
 import it.assoincloud.backend.entity.Member;
 
 public record MemberDto(
@@ -12,9 +14,16 @@ public record MemberDto(
     String address,
     String city,
     String phone,
-    String membershipDate
+    String membershipDate,
+    List<Integer> membershipYears,
+    boolean active
 ) {
     public static MemberDto from(Member member) {
+        List<Integer> years = member.getMembershipYears().stream()
+            .map(my -> my.getYear())
+            .sorted()
+            .toList();
+        
         return new MemberDto(
             member.getId(),
             member.getLastName(),
@@ -25,7 +34,9 @@ public record MemberDto(
             member.getAddress(),
             member.getCity(),
             member.getPhone(),
-            member.getMembershipDate() != null ? member.getMembershipDate().toString() : null
+            member.getMembershipDate() != null ? member.getMembershipDate().toString() : null,
+            years,
+            member.isActive()
         );
     }
 }

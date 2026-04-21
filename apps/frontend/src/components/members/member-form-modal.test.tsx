@@ -45,6 +45,8 @@ describe("MemberFormModal", () => {
       city: null,
       phone: null,
       membershipDate: "2024-01-02T12:00:00",
+      membershipYears: [2024, 2026],
+      active: true,
     };
 
     render(

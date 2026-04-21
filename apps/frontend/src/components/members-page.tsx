@@ -17,6 +17,8 @@ export function MembersPage() {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [renewingMemberId, setRenewingMemberId] = useState<string | undefined>();
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
   const [csvModalOpened, csvModalHandlers] = useDisclosure(false);
   const [formModalOpened, formModalHandlers] = useDisclosure(false);
@@ -37,6 +39,17 @@ export function MembersPage() {
       setLoading(false);
     }
   }, []);
+
+  const filteredMembers = useCallback((): Member[] => {
+    switch (statusFilter) {
+      case "active":
+        return members.filter((m) => m.active);
+      case "inactive":
+        return members.filter((m) => !m.active);
+      default:
+        return members;
+    }
+  }, [members, statusFilter]);
 
   useEffect(() => {
     loadMembers();
@@ -85,6 +98,24 @@ export function MembersPage() {
   const handleFormSubmit = async (values: MemberFormValues) => {
     setActionLoading(true);
     try {
+      const membershipYears = values.membershipYears
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+        .map((value) => Number.parseInt(value, 10));
+
+      const hasInvalidMembershipYear = membershipYears.some(
+        (year) => Number.isNaN(year) || year < 1900 || year > new Date().getFullYear() + 20,
+      );
+
+      if (hasInvalidMembershipYear) {
+        notifications.show({
+          title: "Errore",
+          message: "Inserisci solo anni di iscrizione validi (4 cifre)",
+          color: "red",
+        });
+        return;
+      }
+
       const payload = {
         lastName: values.lastName,
         firstName: values.firstName,
@@ -95,6 +126,7 @@ export function MembersPage() {
         city: values.city || undefined,
         phone: values.phone || undefined,
         membershipDate: values.membershipDate?.toISOString().split("T")[0],
+        membershipYears,
       };
 
       if (selectedMember) {
@@ -148,6 +180,27 @@ export function MembersPage() {
     }
   };
 
+  const handleRenewMembership = async (member: Member) => {
+    setRenewingMemberId(member.id);
+    try {
+      const updated = await api.renewMembership(member.id);
+      notifications.show({
+        title: "Iscrizione rinnovata",
+        message: `L'iscrizione di ${member.firstName} ${member.lastName} è stata rinnovata`,
+        color: "green",
+      });
+      await loadMembers();
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Errore",
+        message: error instanceof Error ? error.message : "Impossibile rinnovare l'iscrizione",
+        color: "red",
+      });
+    } finally {
+      setRenewingMemberId(undefined);
+    }
+  };
+
   const handleExport = async () => {
     setActionLoading(true);
     try {
@@ -176,6 +229,34 @@ export function MembersPage() {
     }
   };
 
+  const handleExportActive = async () => {
+    setActionLoading(true);
+    try {
+      const blob = await api.exportActiveMembersXlsx();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `soci_attivi_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      notifications.show({
+        title: "Esportazione completata",
+        message: "Il file XLSX dei soci attivi e' stato scaricato",
+        color: "green",
+      });
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Errore",
+        message: error instanceof Error ? error.message : "Impossibile esportare i soci attivi",
+        color: "red",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <Stack gap="md">
       <Group justify="space-between">
@@ -197,6 +278,14 @@ export function MembersPage() {
             Esporta XLSX
           </Button>
           <Button
+            leftSection={<IconDownload size={16} />}
+            variant="light"
+            onClick={handleExportActive}
+            loading={actionLoading}
+          >
+            Esporta Attivi
+          </Button>
+          <Button
             leftSection={<IconPlus size={16} />}
             onClick={handleCreate}
           >
@@ -205,11 +294,39 @@ export function MembersPage() {
         </Group>
       </Group>
 
+      <Group gap="xs">
+        <Button
+          variant={statusFilter === "all" ? "filled" : "light"}
+          size="sm"
+          onClick={() => setStatusFilter("all")}
+        >
+          Tutti ({members.length})
+        </Button>
+        <Button
+          variant={statusFilter === "active" ? "filled" : "light"}
+          size="sm"
+          onClick={() => setStatusFilter("active")}
+          color="green"
+        >
+          Attivi ({members.filter((m) => m.active).length})
+        </Button>
+        <Button
+          variant={statusFilter === "inactive" ? "filled" : "light"}
+          size="sm"
+          onClick={() => setStatusFilter("inactive")}
+          color="gray"
+        >
+          Inattivi ({members.filter((m) => !m.active).length})
+        </Button>
+      </Group>
+
       <LoadingOverlay visible={loading} />
       <MembersTable
-        members={members}
+        members={filteredMembers()}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
+        onRenew={handleRenewMembership}
+        renewingMemberId={renewingMemberId}
       />
 
       <MemberFormModal
