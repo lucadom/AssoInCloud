@@ -26,7 +26,6 @@ import {
   IconSettings,
   IconLayoutDashboard,
   IconMail,
-  IconFolder,
 } from "@tabler/icons-react";
 import { InvoicesPage } from "./invoices-page";
 import { SuppliersPage } from "./suppliers-page";
@@ -38,7 +37,6 @@ import { logout } from "@/lib/api/auth";
 import { fetchCurrentVersion } from "@/lib/api/backup";
 import { SettingsPage } from "./settings-page";
 import { PecInboxPage } from "./pec-inbox-page";
-import { DocumentsPage } from "./documents/documents-page";
 const DashboardPage = dynamic(
   async () => {
     const mod = await import("./dashboard-page");
@@ -58,7 +56,6 @@ const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] =
   { label: "Prodotti", value: "products", icon: IconPackages },
   { label: "Listini", value: "price-lists", icon: IconListDetails },
   { label: "PEC", value: "pec", icon: IconMail },
-  { label: "Documenti", value: "documents", icon: IconFolder },
 ];
 
 export function AppLayout() {
@@ -206,7 +203,6 @@ export function AppLayout() {
         {activePage === "birthdays" && <BirthdaysPage />}
         {activePage === "settings" && <SettingsPage dbVersion={dbVersion} />}
         {activePage === "pec" && <PecInboxPage />}
-        {activePage === "documents" && <DocumentsPage />}
       </AppShell.Main>
     </AppShell>
   );

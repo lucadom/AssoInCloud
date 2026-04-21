@@ -38,7 +38,7 @@ public class DocumentService {
     private final Path storageRoot;
 
     public DocumentService(@Value("${assoincloud.documents.root:./data/documents}") String rootPath) {
-        this.storageRoot = Paths.get(rootPath).toAbsolutePath();
+        this.storageRoot = Paths.get(rootPath).toAbsolutePath().normalize();
     }
 
     @PostConstruct
