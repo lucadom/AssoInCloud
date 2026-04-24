@@ -9,7 +9,7 @@ import type { Member } from "@/types";
 import * as api from "@/lib/api/members";
 import { MembersTable } from "./members/members-table";
 import { MemberFormModal, type MemberFormValues } from "./members/member-form-modal";
-import { CsvUploadModal } from "./members/csv-upload-modal";
+import { CsvImportWizard } from "./members/csv-import-wizard";
 import { DeleteConfirmModal } from "./members/delete-confirm-modal";
 
 export function MembersPage() {
@@ -151,28 +151,6 @@ export function MembersPage() {
       notifications.show({
         title: "Errore",
         message: error instanceof Error ? error.message : "Impossibile salvare il socio",
-        color: "red",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleCsvUpload = async (file: File) => {
-    setActionLoading(true);
-    try {
-      const result = await api.uploadMembersCsv(file);
-      notifications.show({
-        title: "Importazione completata",
-        message: `${result.imported} soci importati, ${result.updated} aggiornati, ${result.skipped} saltati`,
-        color: result.skipped > 0 ? "yellow" : "green",
-      });
-      csvModalHandlers.close();
-      await loadMembers();
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Errore",
-        message: error instanceof Error ? error.message : "Impossibile importare il CSV",
         color: "red",
       });
     } finally {
@@ -337,11 +315,10 @@ export function MembersPage() {
         loading={actionLoading}
       />
 
-      <CsvUploadModal
+      <CsvImportWizard
         opened={csvModalOpened}
         onClose={csvModalHandlers.close}
-        onUpload={handleCsvUpload}
-        loading={actionLoading}
+        onImported={loadMembers}
       />
 
       <DeleteConfirmModal

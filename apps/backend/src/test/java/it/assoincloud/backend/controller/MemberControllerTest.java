@@ -17,7 +17,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import java.nio.charset.StandardCharsets;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.mock.web.MockPart;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -401,5 +403,95 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.imported", is(1)))
                 .andExpect(jsonPath("$.skipped", is(1)));
     }
-}
 
+    // -----------------------------------------------------------------------
+    // POST /api/members/preview-csv
+    // -----------------------------------------------------------------------
+
+    private static final String STANDARD_MAPPING_JSON = """
+            [
+              {"csvHeader":"Cognome","memberField":"lastName"},
+              {"csvHeader":"Nome","memberField":"firstName"},
+              {"csvHeader":"Codice fiscale","memberField":"fiscalCode"},
+              {"csvHeader":"Data di nascita","memberField":"birthDate"},
+              {"csvHeader":"Nato a","memberField":"birthPlace"},
+              {"csvHeader":"Residenza","memberField":"address"},
+              {"csvHeader":"Citta","memberField":"city"},
+              {"csvHeader":"Telefono","memberField":"phone"},
+              {"csvHeader":"Data accettazione","memberField":"membershipDate"}
+            ]
+            """;
+
+    @Test
+    void previewCsvShouldReturnMixedRowStatuses() throws Exception {
+        String csv = "Cognome;Nome;Codice fiscale;Data di nascita;Nato a;Residenza;Citta;Telefono;Data accettazione\n"
+                + "Rossi;Mario;RSSMRA80A01H501U;01/01/1980;Roma;Via Roma 1;Roma;333;15/01/2025\n"
+                + "Bianchi;Luigi;BNCLGU85B15F205X;15/02/1985;Milano;Via Milano;Milano;333;01/02/2025\n"
+                + "Senza;;  ;20/05/1985;Firenze;Via Error;Firenze;333;20/01/2025\n";
+
+        MockPart filePart = new MockPart("file", "members.csv", csv.getBytes(StandardCharsets.UTF_8));
+        filePart.getHeaders().setContentType(MediaType.TEXT_PLAIN);
+        MockPart mappingPart = new MockPart("mapping", STANDARD_MAPPING_JSON.strip().getBytes(StandardCharsets.UTF_8));
+        mappingPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(multipart("/api/members/preview-csv").part(filePart).part(mappingPart))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.truncated", is(false)))
+                .andExpect(jsonPath("$.rows", hasSize(3)))
+                .andExpect(jsonPath("$.rows[0].rowStatus", is("update")))
+                .andExpect(jsonPath("$.rows[1].rowStatus", is("new")))
+                .andExpect(jsonPath("$.rows[2].rowStatus", is("skip")));
+    }
+
+    @Test
+    void previewCsvShouldReturn400WhenMappingMissesFiscalCode() throws Exception {
+        String csv = "Cognome;Nome\nRossi;Mario\n";
+        String badMapping = "[{\"csvHeader\":\"Cognome\",\"memberField\":\"lastName\"}]";
+
+        MockPart filePart = new MockPart("file", "members.csv", csv.getBytes(StandardCharsets.UTF_8));
+        filePart.getHeaders().setContentType(MediaType.TEXT_PLAIN);
+        MockPart mappingPart = new MockPart("mapping", badMapping.getBytes(StandardCharsets.UTF_8));
+        mappingPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(multipart("/api/members/preview-csv").part(filePart).part(mappingPart))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    // -----------------------------------------------------------------------
+    // POST /api/members/confirm-csv-import
+    // -----------------------------------------------------------------------
+
+    @Test
+    void confirmCsvImportShouldInsertAndUpdateMembers() throws Exception {
+        String csv = "Cognome;Nome;Codice fiscale;Data di nascita;Nato a;Residenza;Citta;Telefono;Data accettazione\n"
+                + "Rossi;Mario;RSSMRA80A01H501U;01/01/1980;Roma;Via Aggiornata 99;Roma;333;15/01/2025\n"
+                + "Bianchi;Luigi;BNCLGU85B15F205X;15/02/1985;Milano;Via Milano;Milano;333;01/02/2025\n";
+
+        String optionsJson = "{\"mapping\":" + STANDARD_MAPPING_JSON.strip() + ",\"markAsActive\":false}";
+        MockPart filePart = new MockPart("file", "members.csv", csv.getBytes(StandardCharsets.UTF_8));
+        filePart.getHeaders().setContentType(MediaType.TEXT_PLAIN);
+        MockPart optionsPart = new MockPart("options", optionsJson.getBytes(StandardCharsets.UTF_8));
+        optionsPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(multipart("/api/members/confirm-csv-import").part(filePart).part(optionsPart))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imported", is(1)))
+                .andExpect(jsonPath("$.updated", is(1)))
+                .andExpect(jsonPath("$.skipped", is(0)));
+    }
+
+    @Test
+    void confirmCsvImportShouldReturn400WhenMappingMissesFiscalCode() throws Exception {
+        String csv = "Cognome;Nome\nRossi;Mario\n";
+        String badOptions = "{\"mapping\":[{\"csvHeader\":\"Cognome\",\"memberField\":\"lastName\"}],\"markAsActive\":false}";
+        MockPart filePart = new MockPart("file", "members.csv", csv.getBytes(StandardCharsets.UTF_8));
+        filePart.getHeaders().setContentType(MediaType.TEXT_PLAIN);
+        MockPart optionsPart = new MockPart("options", badOptions.getBytes(StandardCharsets.UTF_8));
+        optionsPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(multipart("/api/members/confirm-csv-import").part(filePart).part(optionsPart))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+}

@@ -1,4 +1,4 @@
-import type { Member, MemberFormData, ImportResult } from "@/types";
+import type { Member, MemberFormData, ImportResult, CsvColumnMapping, CsvPreviewResponse } from "@/types";
 import { authFetch } from "./auth-fetch";
 import { logger } from "../logger";
 
@@ -111,6 +111,46 @@ export async function uploadMembersCsv(file: File): Promise<ImportResult> {
     throw new Error(body?.error ?? "Errore nell'importazione del CSV");
   }
 
+  return res.json();
+}
+
+/** Preview a CSV import: parse rows with the provided column mapping, no DB writes */
+export async function previewCsvImport(
+  file: File,
+  mapping: CsvColumnMapping[]
+): Promise<CsvPreviewResponse> {
+  logger.info("Previewing members CSV import", { filename: file.name });
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("mapping", new Blob([JSON.stringify(mapping)], { type: "application/json" }));
+
+  const res = await authFetch("/members/preview-csv", { method: "POST", body: formData });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    logger.error("Failed to preview members CSV", { status: res.status, error: body?.error });
+    throw new Error(body?.error ?? "Errore nell'anteprima del CSV");
+  }
+  return res.json();
+}
+
+/** Confirm a CSV import: upsert members using the provided mapping and options */
+export async function confirmCsvImport(
+  file: File,
+  mapping: CsvColumnMapping[],
+  markAsActive: boolean
+): Promise<ImportResult> {
+  logger.info("Confirming members CSV import", { filename: file.name, markAsActive });
+  const options = { mapping, markAsActive };
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("options", new Blob([JSON.stringify(options)], { type: "application/json" }));
+
+  const res = await authFetch("/members/confirm-csv-import", { method: "POST", body: formData });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    logger.error("Failed to confirm members CSV import", { status: res.status, error: body?.error });
+    throw new Error(body?.error ?? "Errore nell'importazione del CSV");
+  }
   return res.json();
 }
 

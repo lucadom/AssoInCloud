@@ -21,7 +21,7 @@ The current domain models and features are:
 |---------|--------|-------|
 | Invoices (fatture) | `Invoice`, `InvoiceLineItem`, `InvoiceAttachment` | Import via CSV and FatturaPA XML; P7M extraction |
 | Suppliers (fornitori) | `Supplier` | Auto-created during invoice import |
-| Members (soci) | `Member`, `MembershipYear` | Registry with fiscal code; CSV/XLSX import and export; annual membership year tracking; active/inactive status derived from current-year presence |
+| Members (soci) | `Member`, `MembershipYear` | Registry with fiscal code; CSV/XLSX import and export; advanced CSV import wizard with column mapping, row-level preview, and optional active-year assignment; annual membership year tracking; active/inactive status derived from current-year presence |
 | Price lists (listini) | `PriceListItem` | Linked to products |
 | Products (prodotti) | — | Read-only product catalogue search |
 | Backup | — | Database backup/restore via API |
@@ -289,7 +289,7 @@ src/
 - Current resources:
   - `/api/invoices` — invoice CRUD, CSV/XML import, XLSX export
   - `/api/suppliers` — supplier CRUD
-  - `/api/members` — member CRUD, CSV/XLSX import/export, annual membership year tracking, renewal (`POST /{id}/renew`), active member filtering (`GET /active`), active member XLSX export (`GET /export-xlsx-active`)
+  - `/api/members` — member CRUD, CSV/XLSX import/export, annual membership year tracking, renewal (`POST /{id}/renew`), active member filtering (`GET /active`), active member XLSX export (`GET /export-xlsx-active`); improved CSV import wizard: column mapping preview (`POST /preview-csv`), confirm with optional active-year assignment (`POST /confirm-csv-import`)
   - `/api/products` — product search
   - `/api/price-lists` — price list CRUD
   - `/api/backup` — backup/restore

@@ -7,8 +7,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -22,6 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import it.assoincloud.backend.dto.CsvColumnMappingDto;
+import it.assoincloud.backend.dto.CsvImportOptionsDto;
+import it.assoincloud.backend.dto.CsvPreviewResponseDto;
+import it.assoincloud.backend.dto.CsvPreviewRowDto;
 import it.assoincloud.backend.dto.ImportResultDto;
 import it.assoincloud.backend.entity.Member;
 import it.assoincloud.backend.entity.MembershipYear;
@@ -280,6 +287,199 @@ public class MemberService {
         } catch (Exception e) {
             log.error("Error during member CSV import for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
             throw new RuntimeException("Errore durante l'elaborazione del CSV: " + e.getMessage(), e);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // CSV preview (no DB writes)
+    // -----------------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public CsvPreviewResponseDto previewCsv(MultipartFile file, List<CsvColumnMappingDto> mapping) {
+        log.info("Previewing CSV import for file: {}", file.getOriginalFilename());
+        validateMapping(mapping);
+
+        List<CsvPreviewRowDto> rows = new ArrayList<>();
+        int totalRows = 0;
+        boolean truncated = false;
+        final int MAX_PREVIEW_ROWS = 5000;
+
+        try (var reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            boolean header = true;
+            int rowNumber = 0;
+
+            while ((line = reader.readLine()) != null) {
+                if (header) {
+                    header = false;
+                    continue;
+                }
+                if (line.isBlank()) continue;
+
+                totalRows++;
+                if (totalRows > MAX_PREVIEW_ROWS) {
+                    truncated = true;
+                    continue;
+                }
+
+                rowNumber++;
+                Map<String, String> fields = parseCsvRow(line, mapping);
+                String fiscalCode = fields.getOrDefault("fiscalCode", "");
+
+                if (fiscalCode.isEmpty()) {
+                    rows.add(new CsvPreviewRowDto(rowNumber, "skip",
+                            fields.getOrDefault("firstName", ""),
+                            fields.getOrDefault("lastName", ""),
+                            "", fields.getOrDefault("birthDate", ""),
+                            fields.getOrDefault("birthPlace", ""),
+                            fields.getOrDefault("address", ""),
+                            fields.getOrDefault("city", ""),
+                            fields.getOrDefault("phone", ""),
+                            fields.getOrDefault("membershipDate", "")));
+                    continue;
+                }
+
+                String status = memberRepository.findByFiscalCode(fiscalCode).isPresent() ? "update" : "new";
+                rows.add(new CsvPreviewRowDto(rowNumber, status,
+                        fields.getOrDefault("firstName", ""),
+                        fields.getOrDefault("lastName", ""),
+                        fiscalCode,
+                        fields.getOrDefault("birthDate", ""),
+                        fields.getOrDefault("birthPlace", ""),
+                        fields.getOrDefault("address", ""),
+                        fields.getOrDefault("city", ""),
+                        fields.getOrDefault("phone", ""),
+                        fields.getOrDefault("membershipDate", "")));
+            }
+        } catch (Exception e) {
+            log.error("Error during CSV preview for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
+            throw new RuntimeException("Errore durante l'anteprima del CSV: " + e.getMessage(), e);
+        }
+
+        log.info("CSV preview complete: {} rows previewed, truncated={}", rows.size(), truncated);
+        return new CsvPreviewResponseDto(rows, truncated, truncated ? totalRows : rows.size());
+    }
+
+    // -----------------------------------------------------------------------
+    // CSV confirm import (upsert with optional markAsActive)
+    // -----------------------------------------------------------------------
+
+    public ImportResultDto confirmCsvImport(MultipartFile file, CsvImportOptionsDto options) {
+        log.info("Confirming CSV import for file: {}, markAsActive={}", file.getOriginalFilename(), options.markAsActive());
+        validateMapping(options.mapping());
+
+        int importedCount = 0;
+        int updatedCount = 0;
+        int skippedCount = 0;
+        int currentYear = Year.now().getValue();
+
+        try (var reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            boolean header = true;
+
+            while ((line = reader.readLine()) != null) {
+                if (header) {
+                    header = false;
+                    continue;
+                }
+                if (line.isBlank()) continue;
+
+                Map<String, String> fields = parseCsvRow(line, options.mapping());
+                String fiscalCode = fields.getOrDefault("fiscalCode", "");
+
+                if (fiscalCode.isEmpty()) {
+                    skippedCount++;
+                    continue;
+                }
+
+                var existing = memberRepository.findByFiscalCode(fiscalCode);
+                Member member;
+
+                if (existing.isPresent()) {
+                    member = existing.get();
+                    applyFieldsToMember(member, fields);
+                    memberRepository.save(member);
+                    updatedCount++;
+                } else {
+                    member = new Member(
+                            fields.getOrDefault("lastName", ""),
+                            fields.getOrDefault("firstName", ""),
+                            fiscalCode);
+                    applyFieldsToMember(member, fields);
+                    member = memberRepository.save(member);
+                    importedCount++;
+                }
+
+                if (options.markAsActive()) {
+                    if (!membershipYearRepository.existsByMemberIdAndYear(member.getId(), currentYear)) {
+                        membershipYearRepository.save(new MembershipYear(member, currentYear));
+                    }
+                }
+            }
+
+            log.info("CSV import confirmed: imported={}, updated={}, skipped={}", importedCount, updatedCount, skippedCount);
+            return new ImportResultDto(importedCount, updatedCount, skippedCount);
+        } catch (Exception e) {
+            log.error("Error during CSV confirm import for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
+            throw new RuntimeException("Errore durante l'importazione del CSV: " + e.getMessage(), e);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Shared CSV parsing helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Parses a single semicolon-separated CSV line using the provided column mapping.
+     * Returns a map of memberField → trimmed value.
+     */
+    private Map<String, String> parseCsvRow(String line, List<CsvColumnMappingDto> mapping) {
+        String[] cols = line.split(";", -1);
+        Map<String, String> result = new HashMap<>();
+        for (int i = 0; i < mapping.size() && i < cols.length; i++) {
+            String field = mapping.get(i).memberField();
+            if (field != null && !field.isBlank()) {
+                result.put(field, trim(cols[i]));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Applies parsed field map values to an existing or newly created Member entity.
+     */
+    private void applyFieldsToMember(Member member, Map<String, String> fields) {
+        String lastName = fields.getOrDefault("lastName", "");
+        String firstName = fields.getOrDefault("firstName", "");
+        String birthDateStr = fields.getOrDefault("birthDate", "");
+        String birthPlace = fields.getOrDefault("birthPlace", "");
+        String address = fields.getOrDefault("address", "");
+        String city = fields.getOrDefault("city", "");
+        String phone = fields.getOrDefault("phone", "");
+        String membershipDateStr = fields.getOrDefault("membershipDate", "");
+
+        if (!lastName.isEmpty()) member.setLastName(lastName);
+        if (!firstName.isEmpty()) member.setFirstName(firstName);
+        if (!birthDateStr.isEmpty()) {
+            try { member.setBirthDate(LocalDate.parse(birthDateStr, CSV_DATE_FMT)); } catch (Exception ignored) {}
+        }
+        if (!birthPlace.isEmpty()) member.setBirthPlace(birthPlace);
+        if (!address.isEmpty()) member.setAddress(address);
+        if (!city.isEmpty()) member.setCity(city);
+        if (!phone.isEmpty()) member.setPhone(phone);
+        if (!membershipDateStr.isEmpty()) {
+            try { member.setMembershipDate(LocalDate.parse(membershipDateStr, CSV_DATE_FMT)); } catch (Exception ignored) {}
+        }
+    }
+
+    /**
+     * Validates that at least one column in the mapping targets the {@code fiscalCode} field.
+     *
+     * @throws IllegalArgumentException with Italian message if validation fails
+     */
+    private void validateMapping(List<CsvColumnMappingDto> mapping) {
+        if (mapping == null || mapping.stream().noneMatch(m -> "fiscalCode".equals(m.memberField()))) {
+            throw new IllegalArgumentException("Il mapping deve includere almeno una colonna per il codice fiscale");
         }
     }
 

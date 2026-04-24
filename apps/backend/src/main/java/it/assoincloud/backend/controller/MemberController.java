@@ -19,10 +19,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import it.assoincloud.backend.dto.CsvColumnMappingDto;
+import it.assoincloud.backend.dto.CsvImportOptionsDto;
+import it.assoincloud.backend.dto.CsvPreviewResponseDto;
 import it.assoincloud.backend.dto.ImportResultDto;
 import it.assoincloud.backend.dto.MemberDto;
 import it.assoincloud.backend.entity.Member;
@@ -107,6 +111,40 @@ public class MemberController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("CSV member import failed for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Errore durante l'importazione del CSV: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/preview-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> previewCsv(
+            @RequestPart("file") MultipartFile file,
+            @RequestPart("mapping") List<CsvColumnMappingDto> mapping) {
+        try {
+            CsvPreviewResponseDto result = memberService.previewCsv(file, mapping);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("CSV preview rejected: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("CSV preview failed for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Errore durante l'anteprima del CSV: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/confirm-csv-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> confirmCsvImport(
+            @RequestPart("file") MultipartFile file,
+            @RequestPart("options") CsvImportOptionsDto options) {
+        try {
+            ImportResultDto result = memberService.confirmCsvImport(file, options);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("CSV confirm import rejected: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("CSV confirm import failed for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Errore durante l'importazione del CSV: " + e.getMessage()));
         }
