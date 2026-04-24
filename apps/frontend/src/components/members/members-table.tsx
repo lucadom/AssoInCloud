@@ -100,6 +100,7 @@ export function MembersTable({ members, onEdit, onDelete, onRenew, renewingMembe
     enableSorting: true,
     localization: MRT_Localization_IT,
     initialState: {
+      sorting: [{ id: "lastName", desc: false }],
       density: "xs",
       pagination: { pageIndex: 0, pageSize: 50 },
       columnVisibility: {
