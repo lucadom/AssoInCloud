@@ -36,6 +36,7 @@ vi.mock("@/lib/api/invoices", () => ({
 
 vi.mock("@/lib/api/members", () => ({
   fetchMembers: vi.fn(),
+  fetchActiveMembers: vi.fn(),
 }));
 
 vi.mock("@/lib/api/suppliers", () => ({
@@ -116,6 +117,7 @@ describe("DashboardPage", () => {
     vi.clearAllMocks();
     vi.mocked(invoicesApi.fetchInvoices).mockResolvedValue(sampleInvoices);
     vi.mocked(membersApi.fetchMembers).mockResolvedValue(sampleMembers);
+    vi.mocked(membersApi.fetchActiveMembers).mockResolvedValue(sampleMembers);
     vi.mocked(suppliersApi.fetchSuppliers).mockResolvedValue(sampleSuppliers);
   });
 
@@ -149,6 +151,8 @@ describe("DashboardPage", () => {
     await waitFor(() => {
       // Both Soci and Fornitori cards show "totali registrati"
       expect(screen.getAllByText("totali registrati").length).toBe(2);
+      // Soci card also shows active count
+      expect(screen.getByText("attivi (anno corrente)")).toBeInTheDocument();
     });
   });
 
@@ -218,9 +222,29 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Contanti")).toBeInTheDocument();
   });
 
+  it("should display active member count in the soci card", async () => {
+    vi.mocked(membersApi.fetchMembers).mockResolvedValue([
+      { id: "m1", lastName: "Rossi", firstName: "Marco", fiscalCode: "RSSMRC80A01H501U" },
+      { id: "m2", lastName: "Bianchi", firstName: "Anna", fiscalCode: "BNCNNA90A01H501U" },
+    ]);
+    vi.mocked(membersApi.fetchActiveMembers).mockResolvedValue([
+      { id: "m1", lastName: "Rossi", firstName: "Marco", fiscalCode: "RSSMRC80A01H501U" },
+    ]);
+    render(
+      <TestWrapper>
+        <DashboardPage />
+      </TestWrapper>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("members-total")).toHaveTextContent("2");
+      expect(screen.getByTestId("members-active")).toHaveTextContent("1");
+    });
+  });
+
   it("should handle API error gracefully", async () => {
     vi.mocked(invoicesApi.fetchInvoices).mockRejectedValue(new Error("Net error"));
     vi.mocked(membersApi.fetchMembers).mockRejectedValue(new Error("Net error"));
+    vi.mocked(membersApi.fetchActiveMembers).mockRejectedValue(new Error("Net error"));
     vi.mocked(suppliersApi.fetchSuppliers).mockRejectedValue(new Error("Net error"));
     render(
       <TestWrapper>

@@ -34,7 +34,7 @@ import type { Invoice } from "@/types";
 import type { Member } from "@/types";
 import type { Supplier } from "@/types";
 import { fetchInvoices } from "@/lib/api/invoices";
-import { fetchMembers } from "@/lib/api/members";
+import { fetchMembers, fetchActiveMembers } from "@/lib/api/members";
 import { fetchSuppliers } from "@/lib/api/suppliers";
 import {
   type AppSettings,
@@ -215,6 +215,7 @@ function StatCard({ icon: Icon, color, label, loading, children }: StatCardProps
 export function DashboardPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [activeMembers, setActiveMembers] = useState<Member[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [layouts, setLayouts] = useState<ResponsiveLayouts>(DEFAULT_LAYOUTS);
@@ -286,10 +287,11 @@ export function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    Promise.all([fetchInvoices(), fetchMembers(), fetchSuppliers()])
-      .then(([inv, mem, sup]) => {
+    Promise.all([fetchInvoices(), fetchMembers(), fetchActiveMembers(), fetchSuppliers()])
+      .then(([inv, mem, activeMem, sup]) => {
         setInvoices(inv);
         setMembers(mem);
+        setActiveMembers(activeMem);
         setSuppliers(sup);
       })
       .catch(() => {
@@ -435,8 +437,13 @@ export function DashboardPage() {
     ),
     "soci": (
       <StatCard icon={IconUsers} color="green" label="Soci" loading={loading}>
-        <Text fw={700} size="xl">{members.length}</Text>
+        <Text fw={700} size="xl" data-testid="members-total">{members.length}</Text>
         <Text size="sm" c="dimmed">totali registrati</Text>
+        <Divider my="xs" />
+        <Group justify="space-between">
+          <Text size="sm" c="dimmed">attivi (anno corrente)</Text>
+          <Text size="sm" fw={600} data-testid="members-active">{activeMembers.length}</Text>
+        </Group>
       </StatCard>
     ),
     "compleanno": (
