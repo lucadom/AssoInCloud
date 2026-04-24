@@ -11,19 +11,22 @@ import {
   TagsInput,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
+import type { DateValue } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import type { Member } from "@/types";
 
 export interface MemberFormValues {
   lastName: string;
   firstName: string;
-  birthDate: Date | null;
+  /** Date | string | null — Mantine 8 DatePickerInput returns DateValue (string or Date) */
+  birthDate: DateValue;
   birthPlace: string;
   fiscalCode: string;
   address: string;
   city: string;
   phone: string;
-  membershipDate: Date | null;
+  /** Date | string | null — Mantine 8 DatePickerInput returns DateValue (string or Date) */
+  membershipDate: DateValue;
   membershipYears: string[];
 }
 

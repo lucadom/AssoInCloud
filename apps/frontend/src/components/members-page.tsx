@@ -7,6 +7,7 @@ import { notifications } from "@mantine/notifications";
 import { IconDownload, IconFileSpreadsheet, IconPlus } from "@tabler/icons-react";
 import type { Member } from "@/types";
 import * as api from "@/lib/api/members";
+import { toDateString } from "@/lib/date-utils";
 import { MembersTable } from "./members/members-table";
 import { MemberFormModal, type MemberFormValues } from "./members/member-form-modal";
 import { CsvImportWizard } from "./members/csv-import-wizard";
@@ -119,13 +120,13 @@ export function MembersPage() {
       const payload = {
         lastName: values.lastName,
         firstName: values.firstName,
-        birthDate: values.birthDate?.toISOString().split("T")[0],
+        birthDate: toDateString(values.birthDate),
         birthPlace: values.birthPlace || undefined,
         fiscalCode: values.fiscalCode,
         address: values.address || undefined,
         city: values.city || undefined,
         phone: values.phone || undefined,
-        membershipDate: values.membershipDate?.toISOString().split("T")[0],
+        membershipDate: toDateString(values.membershipDate),
         membershipYears,
       };
 
