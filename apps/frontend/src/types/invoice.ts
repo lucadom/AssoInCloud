@@ -108,4 +108,6 @@ export interface PriceListItem {
   unitPrice: number | null;
   lastPurchaseDate: string;
   totalQuantity: number | null;
+  discountPercentage: number | null;
+  effectiveUnitPrice: number | null;
 }

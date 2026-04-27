@@ -18,21 +18,22 @@ public interface InvoiceLineItemRepository extends JpaRepository<InvoiceLineItem
     List<InvoiceLineItem> searchByDescription(@Param("pattern") String pattern);
 
     /**
-     * Price list query: groups line items by (description, unitPrice) for a given supplier,
-     * optionally filtered by date range. Returns one row per distinct price with the
-     * last purchase date and total ordered quantity.
+     * Price list query: groups line items by (description, unit_of_measure, unit_price, discount_percentage)
+     * for a given supplier, optionally filtered by date range. Returns one row per distinct
+     * (price + discount) combination with the last purchase date and total ordered quantity.
      */
     @Query(value =
         "SELECT li.description, li.unit_of_measure, li.unit_price, " +
         "       MAX(i.date) AS last_purchase_date, " +
-        "       SUM(li.quantity) AS total_quantity " +
+        "       SUM(li.quantity) AS total_quantity, " +
+        "       li.discount_percentage " +
         "FROM invoice_line_items li " +
         "JOIN invoices i ON li.invoice_id = i.id " +
         "WHERE i.supplier_id = :supplierId " +
         "  AND (:dateFrom IS NULL OR i.date >= :dateFrom) " +
         "  AND (:dateTo IS NULL OR i.date <= :dateTo) " +
         "  AND li.unit_price > 0 " +
-        "GROUP BY li.description, li.unit_of_measure, li.unit_price " +
+        "GROUP BY li.description, li.unit_of_measure, li.unit_price, li.discount_percentage " +
         "HAVING SUM(li.quantity) > 0 " +
         "ORDER BY li.description ASC, MAX(i.date) DESC",
         nativeQuery = true)

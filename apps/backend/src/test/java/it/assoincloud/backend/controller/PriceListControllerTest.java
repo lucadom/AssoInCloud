@@ -2,8 +2,10 @@ package it.assoincloud.backend.controller;
 
 import java.math.BigDecimal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +13,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +26,9 @@ import it.assoincloud.backend.entity.InvoiceLineItem;
 import it.assoincloud.backend.entity.Supplier;
 import it.assoincloud.backend.repository.InvoiceRepository;
 import it.assoincloud.backend.repository.SupplierRepository;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 
 /**
  * Integration tests for PriceListController REST endpoint.
@@ -53,21 +61,21 @@ class PriceListControllerTest {
         // Invoice 1: 2024-03-15
         Invoice inv1 = createInvoice("F001", "2024-03-15", supplier);
         addLineItem(inv1, 1, "Caffè espresso", new BigDecimal("10"), "KG",
-                new BigDecimal("5.50"), new BigDecimal("55.00"));
+                new BigDecimal("5.50"), new BigDecimal("55.00"), null);
         addLineItem(inv1, 2, "Tè verde", new BigDecimal("5"), "KG",
-                new BigDecimal("8.00"), new BigDecimal("40.00"));
+                new BigDecimal("8.00"), new BigDecimal("40.00"), null);
         invoiceRepository.save(inv1);
 
-        // Invoice 2: 2024-06-20 — same product "Caffè espresso" at SAME price
+        // Invoice 2: 2024-06-20 — same product "Caffè espresso" at SAME price, no discount
         Invoice inv2 = createInvoice("F002", "2024-06-20", supplier);
         addLineItem(inv2, 1, "Caffè espresso", new BigDecimal("20"), "KG",
-                new BigDecimal("5.50"), new BigDecimal("110.00"));
+                new BigDecimal("5.50"), new BigDecimal("110.00"), null);
         invoiceRepository.save(inv2);
 
         // Invoice 3: 2024-09-10 — same product "Caffè espresso" at DIFFERENT price
         Invoice inv3 = createInvoice("F003", "2024-09-10", supplier);
         addLineItem(inv3, 1, "Caffè espresso", new BigDecimal("15"), "KG",
-                new BigDecimal("6.00"), new BigDecimal("90.00"));
+                new BigDecimal("6.00"), new BigDecimal("90.00"), null);
         invoiceRepository.save(inv3);
     }
 
@@ -92,6 +100,59 @@ class PriceListControllerTest {
                 .andExpect(jsonPath("$[2].unitPrice", is(8.0)))
                 .andExpect(jsonPath("$[2].lastPurchaseDate", is("2024-03-15")))
                 .andExpect(jsonPath("$[2].totalQuantity", is(5.0)));
+    }
+
+    @Test
+    void shouldReturnNullDiscountAndEffectivePriceEqualToUnitPriceWhenNoDiscount() throws Exception {
+        mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].discountPercentage", nullValue()))
+                .andExpect(jsonPath("$[0].effectiveUnitPrice", is(6.0)));
+    }
+
+    @Test
+    void shouldReturnSeparateRowsForSameProductWithDifferentDiscounts() throws Exception {
+        Invoice inv = createInvoice("F010", "2024-11-01", supplier);
+        addLineItem(inv, 1, "Prodotto scontato", new BigDecimal("10"), "PZ",
+                new BigDecimal("10.00"), new BigDecimal("90.00"), new BigDecimal("10"));
+        addLineItem(inv, 2, "Prodotto scontato", new BigDecimal("5"), "PZ",
+                new BigDecimal("10.00"), new BigDecimal("80.00"), new BigDecimal("20"));
+        invoiceRepository.save(inv);
+
+        mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId()))
+                .andExpect(status().isOk())
+                // "Prodotto scontato" at 10.00 with 10% discount AND with 20% discount = 2 rows
+                // plus the 3 base rows = 5 total
+                .andExpect(jsonPath("$", hasSize(5)));
+    }
+
+    @Test
+    void shouldComputeEffectiveUnitPriceWithDiscount() throws Exception {
+        Invoice inv = createInvoice("F011", "2024-11-01", supplier);
+        addLineItem(inv, 1, "Articolo scontato", new BigDecimal("10"), "PZ",
+                new BigDecimal("10.00"), new BigDecimal("90.00"), new BigDecimal("20"));
+        invoiceRepository.save(inv);
+
+        mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId()))
+                .andExpect(status().isOk())
+                // Find the row with description "Articolo scontato"
+                .andExpect(jsonPath("$[?(@.description=='Articolo scontato')].discountPercentage").value(20.0))
+                .andExpect(jsonPath("$[?(@.description=='Articolo scontato')].effectiveUnitPrice").value(8.0));
+    }
+
+    @Test
+    void shouldTreatNullDiscountAndZeroDiscountAsSeparateRows() throws Exception {
+        Invoice inv = createInvoice("F012", "2024-11-05", supplier);
+        addLineItem(inv, 1, "Prodotto X", new BigDecimal("5"), "PZ",
+                new BigDecimal("10.00"), new BigDecimal("50.00"), null);
+        addLineItem(inv, 2, "Prodotto X", new BigDecimal("5"), "PZ",
+                new BigDecimal("10.00"), new BigDecimal("50.00"), BigDecimal.ZERO);
+        invoiceRepository.save(inv);
+
+        mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId()))
+                .andExpect(status().isOk())
+                // null discount and 0% discount produce separate rows
+                .andExpect(jsonPath("$[?(@.description=='Prodotto X')]", hasSize(2)));
     }
 
     @Test
@@ -150,7 +211,7 @@ class PriceListControllerTest {
         // Add a line item with null unitPrice
         Invoice inv = createInvoice("F004", "2024-10-01", supplier);
         addLineItem(inv, 1, "Prodotto senza prezzo", new BigDecimal("1"), null,
-                null, null);
+                null, null, null);
         invoiceRepository.save(inv);
 
         mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId()))
@@ -164,19 +225,99 @@ class PriceListControllerTest {
         // Add items with invalid quantity/price
         Invoice inv = createInvoice("F005", "2024-11-01", supplier);
         addLineItem(inv, 1, "Prodotto qty zero", BigDecimal.ZERO, "KG",
-                new BigDecimal("5.00"), BigDecimal.ZERO);
+                new BigDecimal("5.00"), BigDecimal.ZERO, null);
         addLineItem(inv, 2, "Prodotto qty negativa", new BigDecimal("-10"), "KG",
-                new BigDecimal("5.00"), new BigDecimal("-50.00"));
+                new BigDecimal("5.00"), new BigDecimal("-50.00"), null);
         addLineItem(inv, 3, "Prodotto prezzo zero", new BigDecimal("10"), "KG",
-                BigDecimal.ZERO, BigDecimal.ZERO);
+                BigDecimal.ZERO, BigDecimal.ZERO, null);
         addLineItem(inv, 4, "Prodotto prezzo negativo", new BigDecimal("10"), "KG",
-                new BigDecimal("-5.00"), new BigDecimal("-50.00"));
+                new BigDecimal("-5.00"), new BigDecimal("-50.00"), null);
         invoiceRepository.save(inv);
 
         mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId()))
                 .andExpect(status().isOk())
                 // Only the 3 original valid items
                 .andExpect(jsonPath("$", hasSize(3)));
+    }
+
+    @Test
+    void exportXlsx_should_returnXlsxWithHeaderAndData() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId() + "/export-xlsx"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("attachment")))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString(".xlsx")))
+                .andReturn();
+
+        byte[] body = result.getResponse().getContentAsByteArray();
+        assertThat(body).isNotEmpty();
+        // ZIP magic bytes: PK (0x50 0x4B) — XLSX is a ZIP archive
+        assertThat(body[0]).isEqualTo((byte) 0x50);
+        assertThat(body[1]).isEqualTo((byte) 0x4B);
+    }
+
+    @Test
+    void exportXlsx_should_returnEmptyWorkbookWhenNoData() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId() + "/export-xlsx")
+                        .param("from", "2099-01-01"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byte[] body = result.getResponse().getContentAsByteArray();
+        assertThat(body).isNotEmpty();
+    }
+
+    @Test
+    void exportXlsx_should_filterByDateRange() throws Exception {
+        // Only data from 2024-04-01 to 2024-07-31 → 1 item (Invoice 2)
+        MvcResult result = mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId() + "/export-xlsx")
+                        .param("from", "2024-04-01")
+                        .param("to", "2024-07-31"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsByteArray()).isNotEmpty();
+    }
+
+    @Test
+    void exportPdf_should_returnPdfWithMagicBytes() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId() + "/export-pdf"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/pdf"))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("attachment")))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString(".pdf")))
+                .andReturn();
+
+        byte[] body = result.getResponse().getContentAsByteArray();
+        assertThat(body).isNotEmpty();
+        // PDF magic bytes: %PDF
+        assertThat(new String(body, 0, 4)).isEqualTo("%PDF");
+    }
+
+    @Test
+    void exportPdf_should_containSupplierName() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId() + "/export-pdf"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byte[] body = result.getResponse().getContentAsByteArray();
+        String pdfText = extractPdfText(body);
+        assertThat(pdfText).contains("Alfa SRL");
+    }
+
+    @Test
+    void exportPdf_should_showTutteLeDateWhenNoFilter() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/price-lists/supplier/" + supplier.getId() + "/export-pdf"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byte[] body = result.getResponse().getContentAsByteArray();
+        String pdfText = extractPdfText(body);
+        assertThat(pdfText).contains("Tutte le date");
     }
 
     // --- Helper methods ---
@@ -193,9 +334,16 @@ class PriceListControllerTest {
         return inv;
     }
 
+    private static String extractPdfText(byte[] pdfBytes) throws Exception {
+        try (PDDocument doc = Loader.loadPDF(pdfBytes)) {
+            return new PDFTextStripper().getText(doc);
+        }
+    }
+
     private void addLineItem(Invoice inv, int lineNumber, String description,
                              BigDecimal quantity, String uom,
-                             BigDecimal unitPrice, BigDecimal totalPrice) {
+                             BigDecimal unitPrice, BigDecimal totalPrice,
+                             BigDecimal discountPercentage) {
         InvoiceLineItem li = new InvoiceLineItem();
         li.setLineNumber(lineNumber);
         li.setDescription(description);
@@ -203,6 +351,7 @@ class PriceListControllerTest {
         li.setUnitOfMeasure(uom);
         li.setUnitPrice(unitPrice);
         li.setTotalPrice(totalPrice);
+        li.setDiscountPercentage(discountPercentage);
         li.setInvoice(inv);
         inv.getLineItems().add(li);
     }

@@ -20,10 +20,10 @@ import {
   ScrollArea,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
-import { IconSearch } from "@tabler/icons-react";
+import { IconSearch, IconFileSpreadsheet, IconFileTypePdf } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { fetchSuppliers } from "@/lib/api/suppliers";
-import { fetchPriceList } from "@/lib/api/price-lists";
+import { fetchPriceList, exportPriceListXlsx, exportPriceListPdf } from "@/lib/api/price-lists";
 import type { Supplier, PriceListItem } from "@/types";
 
 function formatCurrency(value: number | null): string {
@@ -37,6 +37,11 @@ function formatCurrency(value: number | null): string {
 function formatQuantity(value: number | null): string {
   if (value == null) return "—";
   return value.toLocaleString("it-IT", { maximumFractionDigits: 4 });
+}
+
+function formatDiscount(value: number | null): string {
+  if (value == null) return "—";
+  return value.toLocaleString("it-IT", { maximumFractionDigits: 2 }) + "%";
 }
 
 function formatDate(dateStr: string | null): string {
@@ -92,6 +97,8 @@ export function PriceListPage() {
   const [results, setResults] = useState<PriceListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // Update date fields when preset changes
   useEffect(() => {
@@ -161,6 +168,38 @@ export function PriceListPage() {
     }
   }, [selectedSupplierId, dateFrom, dateTo]);
 
+  const doExportXlsx = useCallback(async () => {
+    if (!selectedSupplierId) return;
+    setExportingXlsx(true);
+    try {
+      await exportPriceListXlsx(selectedSupplierId, toOptional(dateFrom), toOptional(dateTo));
+    } catch {
+      notifications.show({
+        title: "Errore",
+        message: "Impossibile esportare il listino in Excel",
+        color: "red",
+      });
+    } finally {
+      setExportingXlsx(false);
+    }
+  }, [selectedSupplierId, dateFrom, dateTo]);
+
+  const doExportPdf = useCallback(async () => {
+    if (!selectedSupplierId) return;
+    setExportingPdf(true);
+    try {
+      await exportPriceListPdf(selectedSupplierId, toOptional(dateFrom), toOptional(dateTo));
+    } catch {
+      notifications.show({
+        title: "Errore",
+        message: "Impossibile esportare il listino in PDF",
+        color: "red",
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [selectedSupplierId, dateFrom, dateTo]);
+
   const columns = useMemo<MRT_ColumnDef<PriceListItem>[]>(
     () => [
       {
@@ -177,6 +216,22 @@ export function PriceListPage() {
       {
         accessorKey: "unitPrice",
         header: "Prezzo unitario",
+        size: 140,
+        mantineTableHeadCellProps: { align: "right" },
+        mantineTableBodyCellProps: { align: "right" },
+        Cell: ({ cell }) => formatCurrency(cell.getValue<number | null>()),
+      },
+      {
+        accessorKey: "discountPercentage",
+        header: "Sconto (%)",
+        size: 110,
+        mantineTableHeadCellProps: { align: "right" },
+        mantineTableBodyCellProps: { align: "right" },
+        Cell: ({ cell }) => formatDiscount(cell.getValue<number | null>()),
+      },
+      {
+        accessorKey: "effectiveUnitPrice",
+        header: "Prezzo effettivo",
         size: 140,
         mantineTableHeadCellProps: { align: "right" },
         mantineTableBodyCellProps: { align: "right" },
@@ -302,6 +357,26 @@ export function PriceListPage() {
           disabled={!selectedSupplierId}
         >
           Cerca
+        </Button>
+        <Button
+          leftSection={<IconFileSpreadsheet size={16} />}
+          onClick={doExportXlsx}
+          loading={exportingXlsx}
+          disabled={!searched || !selectedSupplierId}
+          variant="light"
+          color="green"
+        >
+          Esporta Excel
+        </Button>
+        <Button
+          leftSection={<IconFileTypePdf size={16} />}
+          onClick={doExportPdf}
+          loading={exportingPdf}
+          disabled={!searched || !selectedSupplierId}
+          variant="light"
+          color="red"
+        >
+          Esporta PDF
         </Button>
       </Group>
 

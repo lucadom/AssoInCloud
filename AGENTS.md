@@ -22,7 +22,7 @@ The current domain models and features are:
 | Invoices (fatture) | `Invoice`, `InvoiceLineItem`, `InvoiceAttachment` | Import via CSV and FatturaPA XML; P7M extraction |
 | Suppliers (fornitori) | `Supplier` | Auto-created during invoice import |
 | Members (soci) | `Member`, `MembershipYear` | Registry with fiscal code; CSV/XLSX import and export; advanced CSV import wizard with column mapping, row-level preview, and optional active-year assignment; annual membership year tracking; active/inactive status derived from current-year presence |
-| Price lists (listini) | `PriceListItem` | Linked to products |
+| Price lists (listini) | `PriceListItem` | Linked to products; per-supplier price list derived from invoice line items grouped by description, unit of measure, unit price and discount percentage; shows effective price after discount; XLSX and PDF export with supplier header and optional date range filter |
 | Products (prodotti) | — | Read-only product catalogue search |
 | Backup | — | Database backup/restore via API |
 | PEC inbox | — | Read-only IMAP access; stateless message access; IMAP config stored in `settings` table |
@@ -92,6 +92,10 @@ user (e.g. `"Errore durante l'elaborazione del CSV"`).
 | Birth date | Data di nascita |
 | Membership date | Data di accettazione |
 | Price list | Listino |
+| Discount percentage | Sconto (%) |
+| Effective price | Prezzo effettivo |
+| Export Excel | Esporta Excel |
+| Export PDF | Esporta PDF |
 | PEC inbox | Casella PEC |
 | Folder | Cartella |
 | Unread | Da leggere |
@@ -291,7 +295,7 @@ src/
   - `/api/suppliers` — supplier CRUD
   - `/api/members` — member CRUD, CSV/XLSX import/export, annual membership year tracking, renewal (`POST /{id}/renew`), active member filtering (`GET /active`), active member XLSX export (`GET /export-xlsx-active`); improved CSV import wizard: column mapping preview (`POST /preview-csv`), confirm with optional active-year assignment (`POST /confirm-csv-import`)
   - `/api/products` — product search
-  - `/api/price-lists` — price list CRUD
+  - `/api/price-lists` — price list CRUD; per-supplier price list with discount and effective price (`GET /supplier/{id}`); XLSX export (`GET /supplier/{id}/export-xlsx`); PDF export with supplier header and date range (`GET /supplier/{id}/export-pdf`)
   - `/api/backup` — backup/restore
   - `/api/auth` — login/logout (unauthenticated)
   - `/api/pec` — read-only IMAP inbox (folders, messages, attachments)
