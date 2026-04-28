@@ -40,7 +40,7 @@ export async function exportPriceListXlsx(
     throw new Error("Errore nell'esportazione del listino in Excel");
   }
   const blob = await res.blob();
-  triggerDownload(blob, buildFilename(supplierId, "xlsx"));
+  triggerDownload(blob, extractFilename(res, `listino_${supplierId}.xlsx`));
 }
 
 /** Export price list as PDF for a supplier, optionally filtered by date range */
@@ -61,7 +61,7 @@ export async function exportPriceListPdf(
     throw new Error("Errore nell'esportazione del listino in PDF");
   }
   const blob = await res.blob();
-  triggerDownload(blob, buildFilename(supplierId, "pdf"));
+  triggerDownload(blob, extractFilename(res, `listino_${supplierId}.pdf`));
 }
 
 function triggerDownload(blob: Blob, filename: string): void {
@@ -73,7 +73,8 @@ function triggerDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-function buildFilename(supplierId: string, ext: string): string {
-  const date = new Date().toISOString().slice(0, 10);
-  return `listino_${supplierId}_${date}.${ext}`;
+function extractFilename(res: Response, fallback: string): string {
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename="([^"]+)"/);
+  return match ? match[1] : fallback;
 }

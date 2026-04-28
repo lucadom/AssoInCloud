@@ -83,12 +83,17 @@ describe("fetchPriceList", () => {
   });
 });
 
+function makeExportResponse(contentDisposition?: string): Response {
+  return {
+    ok: true,
+    blob: () => Promise.resolve(new Blob(["data"])),
+    headers: { get: (h: string) => h.toLowerCase() === "content-disposition" ? (contentDisposition ?? null) : null },
+  } as unknown as Response;
+}
+
 describe("exportPriceListXlsx", () => {
   it("should call correct URL with supplier ID only", async () => {
-    mockAuthFetch.mockResolvedValue({
-      ok: true,
-      blob: () => Promise.resolve(new Blob(["data"], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })),
-    } as Response);
+    mockAuthFetch.mockResolvedValue(makeExportResponse());
 
     await exportPriceListXlsx("supplier-123");
 
@@ -99,16 +104,35 @@ describe("exportPriceListXlsx", () => {
   });
 
   it("should include from and to params when provided", async () => {
-    mockAuthFetch.mockResolvedValue({
-      ok: true,
-      blob: () => Promise.resolve(new Blob()),
-    } as Response);
+    mockAuthFetch.mockResolvedValue(makeExportResponse());
 
     await exportPriceListXlsx("supplier-123", "2024-01-01", "2024-12-31");
 
     expect(mockAuthFetch).toHaveBeenCalledWith(
       "/price-lists/supplier/supplier-123/export-xlsx?from=2024-01-01&to=2024-12-31"
     );
+  });
+
+  it("should use filename from Content-Disposition header", async () => {
+    mockAuthFetch.mockResolvedValue(
+      makeExportResponse('attachment; filename="listino_Acme_Srl_20240428.xlsx"')
+    );
+    const anchor = { href: "", download: "", click: vi.fn() };
+    vi.spyOn(document, "createElement").mockReturnValueOnce(anchor as unknown as HTMLElement);
+
+    await exportPriceListXlsx("supplier-123");
+
+    expect(anchor.download).toBe("listino_Acme_Srl_20240428.xlsx");
+  });
+
+  it("should fall back to supplier ID when Content-Disposition is absent", async () => {
+    mockAuthFetch.mockResolvedValue(makeExportResponse());
+    const anchor = { href: "", download: "", click: vi.fn() };
+    vi.spyOn(document, "createElement").mockReturnValueOnce(anchor as unknown as HTMLElement);
+
+    await exportPriceListXlsx("supplier-123");
+
+    expect(anchor.download).toBe("listino_supplier-123.xlsx");
   });
 
   it("should throw on non-ok response", async () => {
@@ -125,10 +149,7 @@ describe("exportPriceListXlsx", () => {
 
 describe("exportPriceListPdf", () => {
   it("should call correct URL with supplier ID only", async () => {
-    mockAuthFetch.mockResolvedValue({
-      ok: true,
-      blob: () => Promise.resolve(new Blob(["data"], { type: "application/pdf" })),
-    } as Response);
+    mockAuthFetch.mockResolvedValue(makeExportResponse());
 
     await exportPriceListPdf("supplier-123");
 
@@ -139,16 +160,35 @@ describe("exportPriceListPdf", () => {
   });
 
   it("should include from and to params when provided", async () => {
-    mockAuthFetch.mockResolvedValue({
-      ok: true,
-      blob: () => Promise.resolve(new Blob()),
-    } as Response);
+    mockAuthFetch.mockResolvedValue(makeExportResponse());
 
     await exportPriceListPdf("supplier-123", "2024-01-01", "2024-12-31");
 
     expect(mockAuthFetch).toHaveBeenCalledWith(
       "/price-lists/supplier/supplier-123/export-pdf?from=2024-01-01&to=2024-12-31"
     );
+  });
+
+  it("should use filename from Content-Disposition header", async () => {
+    mockAuthFetch.mockResolvedValue(
+      makeExportResponse('attachment; filename="listino_Acme_Srl_20240428.pdf"')
+    );
+    const anchor = { href: "", download: "", click: vi.fn() };
+    vi.spyOn(document, "createElement").mockReturnValueOnce(anchor as unknown as HTMLElement);
+
+    await exportPriceListPdf("supplier-123");
+
+    expect(anchor.download).toBe("listino_Acme_Srl_20240428.pdf");
+  });
+
+  it("should fall back to supplier ID when Content-Disposition is absent", async () => {
+    mockAuthFetch.mockResolvedValue(makeExportResponse());
+    const anchor = { href: "", download: "", click: vi.fn() };
+    vi.spyOn(document, "createElement").mockReturnValueOnce(anchor as unknown as HTMLElement);
+
+    await exportPriceListPdf("supplier-123");
+
+    expect(anchor.download).toBe("listino_supplier-123.pdf");
   });
 
   it("should throw on non-ok response", async () => {

@@ -3,6 +3,7 @@ package it.assoincloud.backend.controller;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -79,9 +80,9 @@ class PriceListPdfExporter {
                 for (PriceListItemDto item : items) {
                     addCell(table, nullToEmpty(item.description()), smallFont, Element.ALIGN_LEFT);
                     addCell(table, nullToEmpty(item.unitOfMeasure()), smallFont, Element.ALIGN_CENTER);
-                    addCell(table, formatDecimal(item.unitPrice()), smallFont, Element.ALIGN_RIGHT);
+                    addCell(table, formatPrice(item.unitPrice()), smallFont, Element.ALIGN_RIGHT);
                     addCell(table, formatDiscount(item.discountPercentage()), smallFont, Element.ALIGN_RIGHT);
-                    addCell(table, formatDecimal(item.effectiveUnitPrice()), smallFont, Element.ALIGN_RIGHT);
+                    addCell(table, formatPrice(item.effectiveUnitPrice()), smallFont, Element.ALIGN_RIGHT);
                     addCell(table, formatDate(item.lastPurchaseDate()), smallFont, Element.ALIGN_CENTER);
                     addCell(table, formatDecimal(item.totalQuantity()), smallFont, Element.ALIGN_RIGHT);
                 }
@@ -124,6 +125,11 @@ class PriceListPdfExporter {
         return value != null ? value : "";
     }
 
+    private static String formatPrice(BigDecimal value) {
+        if (value == null) return "—";
+        return value.setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+
     private static String formatDecimal(BigDecimal value) {
         if (value == null) return "—";
         return value.stripTrailingZeros().toPlainString();
@@ -131,7 +137,7 @@ class PriceListPdfExporter {
 
     private static String formatDiscount(BigDecimal value) {
         if (value == null) return "—";
-        return value.stripTrailingZeros().toPlainString() + "%";
+        return value.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "%";
     }
 
     private static String formatDate(String dateStr) {
