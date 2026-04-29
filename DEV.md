@@ -220,6 +220,8 @@ JAVA_OPTS=-Xms256m -Xmx1g
 - **DDL**: `hibernate.ddl-auto=none` — non modificare mai le migration esistenti,
   creare sempre una nuova `V<N>__description.sql`.
 - **Percorso**: `data/assoincloud.db` (directory git-ignored).
+- **Fatture elettroniche**: i file originali XML/P7M importati da upload diretto
+  o da PEC sono conservati nel database e scaricabili dal dettaglio fattura.
 
 ### Backup e ripristino
 

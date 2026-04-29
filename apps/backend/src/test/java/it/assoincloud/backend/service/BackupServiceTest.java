@@ -22,7 +22,7 @@ class BackupServiceTest {
     @Test
     void getCurrentVersionShouldReturnLatestMigrationVersion() {
         String version = backupService.getCurrentVersion();
-        assertThat(version).isEqualTo("6");
+        assertThat(version).isEqualTo("7");
     }
 
     @Test
@@ -39,7 +39,7 @@ class BackupServiceTest {
     void readVersionFromBytesShouldReturnVersionFromBackup() throws Exception {
         byte[] backup = backupService.downloadBackup();
         String version = backupService.readVersionFromBytes(backup);
-        assertThat(version).isEqualTo("6");
+        assertThat(version).isEqualTo("7");
     }
 
     @Test

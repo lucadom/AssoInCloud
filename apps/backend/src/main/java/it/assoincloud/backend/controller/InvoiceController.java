@@ -1,7 +1,9 @@
 package it.assoincloud.backend.controller;
 
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.http.ContentDisposition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +27,7 @@ import it.assoincloud.backend.dto.ImportResultDto;
 import it.assoincloud.backend.dto.InvoiceDto;
 import it.assoincloud.backend.dto.InvoiceFormData;
 import it.assoincloud.backend.entity.InvoiceAttachment;
+import it.assoincloud.backend.entity.InvoiceSourceFile;
 import it.assoincloud.backend.service.InvoiceService;
 
 @RestController
@@ -108,5 +111,20 @@ public class InvoiceController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + att.getFileName() + "\"")
                 .contentType(MediaType.parseMediaType(att.getContentType()))
                 .body(att.getData());
+    }
+
+    @GetMapping("/{invoiceId}/source-file")
+    public ResponseEntity<?> downloadSourceFile(@PathVariable String invoiceId) {
+        try {
+            InvoiceSourceFile sourceFile = invoiceService.getSourceFile(invoiceId);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            ContentDisposition.attachment().filename(sourceFile.getFileName()).build().toString())
+                    .contentType(MediaType.parseMediaType(sourceFile.getContentType()))
+                    .body(sourceFile.getData());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

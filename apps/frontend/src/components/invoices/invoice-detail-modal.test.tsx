@@ -17,6 +17,8 @@ const sampleInvoice: Invoice = {
   totalAmount: 1220,
   sdiNumber: "9988776",
   viewed: true,
+  sourceFileAvailable: true,
+  sourceFileName: "fattura.xml",
   currency: "EUR",
   supplierFiscalCode: "RSSMRA80A01H501Z",
   supplierAddress: "Via Roma 1",
@@ -128,6 +130,34 @@ describe("InvoiceDetailModal", () => {
       </TestWrapper>
     );
     expect(screen.getByText("fattura.pdf")).toBeInTheDocument();
+  });
+
+  it("should display original source file download when available", () => {
+    render(
+      <TestWrapper>
+        <InvoiceDetailModal invoice={sampleInvoice} opened={true} onClose={onClose} />
+      </TestWrapper>
+    );
+    expect(screen.getByText("File originale")).toBeInTheDocument();
+    expect(screen.getByText("fattura.xml")).toBeInTheDocument();
+    expect(screen.getByLabelText("Scarica file originale")).toHaveAttribute(
+      "href",
+      expect.stringContaining("/invoices/inv-1/source-file")
+    );
+  });
+
+  it("should hide original source file download when unavailable", () => {
+    render(
+      <TestWrapper>
+        <InvoiceDetailModal
+          invoice={{ ...sampleInvoice, sourceFileAvailable: false, sourceFileName: null }}
+          opened={true}
+          onClose={onClose}
+        />
+      </TestWrapper>
+    );
+    expect(screen.queryByText("File originale")).not.toBeInTheDocument();
+    expect(screen.queryByText("fattura.xml")).not.toBeInTheDocument();
   });
 
   it("should display payment info", () => {

@@ -3,7 +3,12 @@ package it.assoincloud.backend.controller;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import it.assoincloud.backend.service.InvoiceService;
+
 /**
  * Integration tests for InvoiceController + InvoiceService (full stack with in-memory SQLite).
  */
@@ -39,6 +46,9 @@ class InvoiceControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private InvoiceService invoiceService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -114,7 +124,8 @@ class InvoiceControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.invoiceNumber", is("FT/001")))
                 .andExpect(jsonPath("$.documentType", is("TD01")))
-                .andExpect(jsonPath("$.supplier.name", is("Test SRL")));
+                .andExpect(jsonPath("$.supplier.name", is("Test SRL")))
+                .andExpect(jsonPath("$.sourceFileAvailable", is(false)));
     }
 
     @Test
@@ -142,6 +153,33 @@ class InvoiceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.invoiceNumber", is("FT/GET/001")))
                 .andExpect(jsonPath("$.viewed", is(true)));
+    }
+
+    @Test
+    void downloadSourceFileShouldReturnNotFoundWhenMissing() throws Exception {
+        String body = """
+                {
+                  "documentType": "TD01",
+                  "invoiceNumber": "FT/NOFILE/001",
+                  "date": "2024-05-01",
+                  "supplierName": "No File SRL",
+                  "supplierVatNumber": "IT12121212121",
+                  "taxableAmount": 100.00,
+                  "taxAmount": 22.00,
+                  "sdiNumber": "",
+                  "viewed": false
+                }""";
+        MvcResult result = mockMvc.perform(post("/api/invoices")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sourceFileAvailable", is(false)))
+                .andReturn();
+        String id = objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(get("/api/invoices/" + id + "/source-file"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error", is("File originale della fattura non disponibile")));
     }
 
     @Test
@@ -221,7 +259,8 @@ class InvoiceControllerTest {
 
         mockMvc.perform(get("/api/invoices"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(3)));
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0].sourceFileAvailable", is(false)));
     }
 
     @Test
@@ -298,6 +337,76 @@ class InvoiceControllerTest {
         assertEquals("FT/XML/001", invoices.get(0).get("invoiceNumber").asText());
         assertEquals("Gamma SRL", invoices.get(0).get("supplier").get("name").asText());
         assertEquals("11111111111", invoices.get(0).get("supplier").get("vatNumber").asText());
+    }
+
+    @Test
+    void uploadInvoiceXmlShouldRetainOriginalSourceFile() throws Exception {
+        byte[] originalBytes = XML_INVOICE.getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile file = new MockMultipartFile(
+                "files", "fattura.xml", "application/xml", originalBytes);
+
+        mockMvc.perform(multipart("/api/invoices/upload/invoice").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imported", is(1)));
+
+        MvcResult listResult = mockMvc.perform(get("/api/invoices"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].sourceFileAvailable", is(true)))
+                .andExpect(jsonPath("$[0].sourceFileName", is("fattura.xml")))
+                .andReturn();
+        String invoiceId = objectMapper.readTree(listResult.getResponse().getContentAsString()).get(0).get("id").asText();
+
+        MvcResult downloadResult = mockMvc.perform(get("/api/invoices/" + invoiceId + "/source-file"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertTrue(downloadResult.getResponse().getHeader("Content-Disposition").contains("fattura.xml"));
+        assertArrayEquals(originalBytes, downloadResult.getResponse().getContentAsByteArray());
+    }
+
+    @Test
+    void importXmlFromBytesShouldRetainPecAttachmentSourceFile() throws Exception {
+        byte[] originalBytes = XML_INVOICE.getBytes(StandardCharsets.UTF_8);
+        invoiceService.importXmlFromBytes(originalBytes, "pec-fattura.xml", "application/xml");
+
+        MvcResult listResult = mockMvc.perform(get("/api/invoices"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].sourceFileAvailable", is(true)))
+                .andExpect(jsonPath("$[0].sourceFileName", is("pec-fattura.xml")))
+                .andReturn();
+        String invoiceId = objectMapper.readTree(listResult.getResponse().getContentAsString()).get(0).get("id").asText();
+
+        MvcResult downloadResult = mockMvc.perform(get("/api/invoices/" + invoiceId + "/source-file"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertArrayEquals(originalBytes, downloadResult.getResponse().getContentAsByteArray());
+    }
+
+    @Test
+    void uploadXmlTwiceShouldReplaceOriginalSourceFile() throws Exception {
+        byte[] firstBytes = XML_INVOICE.getBytes(StandardCharsets.UTF_8);
+        String changedXml = XML_INVOICE.replace("</p:FatturaElettronica>", "<!-- changed --></p:FatturaElettronica>");
+        byte[] secondBytes = changedXml.getBytes(StandardCharsets.UTF_8);
+
+        mockMvc.perform(multipart("/api/invoices/upload/invoice").file(
+                        new MockMultipartFile("files", "first.xml", "application/xml", firstBytes)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imported", is(1)));
+        mockMvc.perform(multipart("/api/invoices/upload/invoice").file(
+                        new MockMultipartFile("files", "second.xml", "application/xml", secondBytes)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.updated", is(1)));
+
+        MvcResult listResult = mockMvc.perform(get("/api/invoices"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].sourceFileName", is("second.xml")))
+                .andReturn();
+        String invoiceId = objectMapper.readTree(listResult.getResponse().getContentAsString()).get(0).get("id").asText();
+
+        MvcResult downloadResult = mockMvc.perform(get("/api/invoices/" + invoiceId + "/source-file"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertArrayEquals(secondBytes, downloadResult.getResponse().getContentAsByteArray());
     }
 
     @Test

@@ -18,6 +18,7 @@ import {
   uploadCsv,
   uploadInvoiceFiles,
   getAttachmentUrl,
+  getSourceFileUrl,
 } from "./invoices";
 import { authFetch } from "./auth-fetch";
 import { getToken } from "./auth";
@@ -212,6 +213,22 @@ describe("invoices API", () => {
       mockGetToken.mockReturnValue(null);
       const url = getAttachmentUrl("inv-1", "att-1");
       expect(url).toContain("/invoices/inv-1/attachments/att-1");
+      expect(url).not.toContain("token=");
+    });
+  });
+
+  describe("getSourceFileUrl", () => {
+    it("should include token in query param", () => {
+      mockGetToken.mockReturnValue("my-token");
+      const url = getSourceFileUrl("inv-1");
+      expect(url).toContain("/invoices/inv-1/source-file");
+      expect(url).toContain("token=my-token");
+    });
+
+    it("should return URL without token when no token", () => {
+      mockGetToken.mockReturnValue(null);
+      const url = getSourceFileUrl("inv-1");
+      expect(url).toContain("/invoices/inv-1/source-file");
       expect(url).not.toContain("token=");
     });
   });

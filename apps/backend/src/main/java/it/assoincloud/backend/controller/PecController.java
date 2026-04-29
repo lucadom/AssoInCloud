@@ -142,7 +142,7 @@ public class PecController {
         }
         try {
             PecService.AttachmentData data = pecService.getAttachmentBytes(folder, uid, partIndex, envelope);
-            ImportResultDto result = invoiceService.importXmlFromBytes(data.bytes(), data.filename());
+            ImportResultDto result = invoiceService.importXmlFromBytes(data.bytes(), data.filename(), data.contentType());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest()

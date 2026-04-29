@@ -25,6 +25,8 @@ public record InvoiceDto(
     String sdiNumber,
     boolean viewed,
     String fileName,
+    boolean sourceFileAvailable,
+    String sourceFileName,
     // XML-specific fields
     String currency,
     String causale,
@@ -63,6 +65,8 @@ public record InvoiceDto(
             entity.getSdiNumber() != null ? entity.getSdiNumber() : "",
             entity.isViewed(),
             entity.getFileName(),
+            entity.getSourceFile() != null,
+            entity.getSourceFile() != null ? entity.getSourceFile().getFileName() : null,
             entity.getCurrency(),
             entity.getCausale(),
             entity.getPaymentMethod(),

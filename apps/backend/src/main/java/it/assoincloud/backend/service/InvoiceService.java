@@ -20,9 +20,11 @@ import it.assoincloud.backend.dto.ImportResultDto;
 import it.assoincloud.backend.dto.InvoiceFormData;
 import it.assoincloud.backend.entity.Invoice;
 import it.assoincloud.backend.entity.InvoiceAttachment;
+import it.assoincloud.backend.entity.InvoiceSourceFile;
 import it.assoincloud.backend.entity.Supplier;
 import it.assoincloud.backend.repository.InvoiceAttachmentRepository;
 import it.assoincloud.backend.repository.InvoiceRepository;
+import it.assoincloud.backend.repository.InvoiceSourceFileRepository;
 import it.assoincloud.backend.repository.SupplierRepository;
 
 @Service
@@ -35,15 +37,18 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final SupplierRepository supplierRepository;
     private final InvoiceAttachmentRepository attachmentRepository;
+    private final InvoiceSourceFileRepository sourceFileRepository;
     private final FatturaElettronicaParser xmlParser;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
-                          SupplierRepository supplierRepository,
-                          InvoiceAttachmentRepository attachmentRepository,
-                          FatturaElettronicaParser xmlParser) {
+                           SupplierRepository supplierRepository,
+                           InvoiceAttachmentRepository attachmentRepository,
+                           InvoiceSourceFileRepository sourceFileRepository,
+                           FatturaElettronicaParser xmlParser) {
         this.invoiceRepository = invoiceRepository;
         this.supplierRepository = supplierRepository;
         this.attachmentRepository = attachmentRepository;
+        this.sourceFileRepository = sourceFileRepository;
         this.xmlParser = xmlParser;
     }
 
@@ -148,7 +153,7 @@ public class InvoiceService {
         try {
             String originalFileName = file.getOriginalFilename();
             byte[] bytes = file.getBytes();
-            return importXmlFromBytes(bytes, originalFileName);
+            return importXmlFromBytes(bytes, originalFileName, file.getContentType());
         } catch (Exception e) {
             log.error("Error during XML import for file '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
             throw new RuntimeException("Errore durante l'elaborazione del file: " + e.getMessage(), e);
@@ -156,8 +161,14 @@ public class InvoiceService {
     }
 
     public ImportResultDto importXmlFromBytes(byte[] bytes, String filename) {
+        return importXmlFromBytes(bytes, filename, detectContentType(filename));
+    }
+
+    public ImportResultDto importXmlFromBytes(byte[] bytes, String filename, String contentType) {
         log.info("Parsing invoice file: {}", filename);
         try {
+            String sourceFileName = normalizeFileName(filename);
+            String sourceContentType = normalizeContentType(contentType, sourceFileName);
             java.io.InputStream xmlInput;
             if (P7mContentExtractor.isP7mFile(filename)) {
                 byte[] xmlBytes = P7mContentExtractor.extractContent(bytes);
@@ -177,11 +188,13 @@ public class InvoiceService {
                     old.getLineItems().clear();
                     old.getAttachments().clear();
                     copyInvoiceData(invoice, old);
+                    attachSourceFile(old, bytes, sourceFileName, sourceContentType);
                     invoiceRepository.save(old);
                     return new ImportResultDto(0, 1, 0);
                 }
             }
 
+            attachSourceFile(invoice, bytes, sourceFileName, sourceContentType);
             invoiceRepository.save(invoice);
             log.info("Invoice imported: number={}, file={}", invoice.getInvoiceNumber(), filename);
             return new ImportResultDto(1, 0, 0);
@@ -197,6 +210,16 @@ public class InvoiceService {
     public InvoiceAttachment getAttachment(String invoiceId, String attachmentId) {
         return attachmentRepository.findByIdAndInvoiceId(attachmentId, invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Allegato non trovato"));
+    }
+
+    @Transactional(readOnly = true)
+    public InvoiceSourceFile getSourceFile(String invoiceId) {
+        log.info("Fetching source file for invoice id: {}", invoiceId);
+        if (!invoiceRepository.existsById(invoiceId)) {
+            throw new IllegalArgumentException("Fattura non trovata");
+        }
+        return sourceFileRepository.findByInvoiceId(invoiceId)
+                .orElseThrow(() -> new IllegalStateException("File originale della fattura non disponibile"));
     }
 
     // ---- Helpers ----
@@ -238,6 +261,17 @@ public class InvoiceService {
             att.setInvoice(target);
             target.getAttachments().add(att);
         }
+    }
+
+    private void attachSourceFile(Invoice invoice, byte[] bytes, String fileName, String contentType) {
+        InvoiceSourceFile sourceFile = invoice.getSourceFile();
+        if (sourceFile == null) {
+            sourceFile = new InvoiceSourceFile();
+            invoice.setSourceFile(sourceFile);
+        }
+        sourceFile.setFileName(fileName);
+        sourceFile.setContentType(contentType);
+        sourceFile.setData(bytes);
     }
 
     private void applyFormData(Invoice inv, InvoiceFormData data) {
@@ -297,6 +331,27 @@ public class InvoiceService {
             return trimmed.substring(1, trimmed.length() - 1);
         }
         return trimmed;
+    }
+
+    private static String normalizeFileName(String filename) {
+        return filename != null && !filename.isBlank() ? filename : "fattura";
+    }
+
+    private static String normalizeContentType(String contentType, String filename) {
+        if (contentType != null && !contentType.isBlank()) {
+            return contentType;
+        }
+        return detectContentType(filename);
+    }
+
+    private static String detectContentType(String filename) {
+        if (filename != null && P7mContentExtractor.isP7mFile(filename)) {
+            return "application/pkcs7-mime";
+        }
+        if (filename != null && filename.toLowerCase().endsWith(".xml")) {
+            return "application/xml";
+        }
+        return "application/octet-stream";
     }
 
     /**

@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -103,6 +104,9 @@ public class Invoice {
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<InvoiceAttachment> attachments = new ArrayList<>();
 
+    @OneToOne(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private InvoiceSourceFile sourceFile;
+
     public Invoice() {}
 
     // --- Getters / Setters ---
@@ -178,6 +182,14 @@ public class Invoice {
 
     public List<InvoiceAttachment> getAttachments() { return attachments; }
     public void setAttachments(List<InvoiceAttachment> attachments) { this.attachments = attachments; }
+
+    public InvoiceSourceFile getSourceFile() { return sourceFile; }
+    public void setSourceFile(InvoiceSourceFile sourceFile) {
+        this.sourceFile = sourceFile;
+        if (sourceFile != null) {
+            sourceFile.setInvoice(this);
+        }
+    }
 
     @PrePersist
     @PreUpdate

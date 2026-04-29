@@ -53,6 +53,8 @@ export interface Invoice {
   sdiNumber: string;       // Sdi/file
   viewed: boolean;         // Fatture visualizzate
   fileName?: string;
+  sourceFileAvailable?: boolean;
+  sourceFileName?: string | null;
   // XML-specific fields
   currency?: string;
   causale?: string;

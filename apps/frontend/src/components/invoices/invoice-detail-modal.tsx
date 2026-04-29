@@ -15,9 +15,9 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconDownload, IconEye, IconFileTypePdf } from "@tabler/icons-react";
+import { IconDownload, IconEye, IconFileText, IconFileTypePdf } from "@tabler/icons-react";
 import type { Invoice } from "@/types";
-import { getAttachmentUrl } from "@/lib/api/invoices";
+import { getAttachmentUrl, getSourceFileUrl } from "@/lib/api/invoices";
 
 interface InvoiceDetailModalProps {
   invoice: Invoice | null;
@@ -84,6 +84,7 @@ export function InvoiceDetailModal({
   const hasLineItems = invoice.lineItems && invoice.lineItems.length > 0;
   const hasAttachments = invoice.attachments && invoice.attachments.length > 0;
   const hasPaymentInfo = invoice.paymentMethod || invoice.paymentDueDate || invoice.iban;
+  const hasSourceFile = invoice.sourceFileAvailable && invoice.sourceFileName;
 
   return (
     <>
@@ -335,6 +336,34 @@ export function InvoiceDetailModal({
           )}
 
           {/* Attachments */}
+          {hasSourceFile && (
+            <>
+              <Divider />
+              <Text fw={600} size="md">
+                File originale
+              </Text>
+              <Group gap="sm" align="center">
+                <IconFileText size={20} color="var(--mantine-color-blue-6)" />
+                <Text size="sm" fw={500} style={{ flex: 1 }}>
+                  {invoice.sourceFileName}
+                </Text>
+                <Tooltip label="Scarica file originale">
+                  <ActionIcon
+                    variant="light"
+                    color="blue"
+                    component="a"
+                    href={getSourceFileUrl(invoice.id)}
+                    download={invoice.sourceFileName}
+                    target="_blank"
+                    aria-label="Scarica file originale"
+                  >
+                    <IconDownload size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            </>
+          )}
+
           {hasAttachments && (
             <>
               <Divider />

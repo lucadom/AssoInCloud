@@ -110,3 +110,10 @@ export function getAttachmentUrl(invoiceId: string, attachmentId: string): strin
   const base = `${API_BASE}/invoices/${invoiceId}/attachments/${attachmentId}`;
   return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
+
+/** Get the URL for downloading the original imported XML/P7M source file */
+export function getSourceFileUrl(invoiceId: string): string {
+  const token = getToken();
+  const base = `${API_BASE}/invoices/${invoiceId}/source-file`;
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+}
