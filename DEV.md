@@ -31,6 +31,12 @@ assoincloud/
 └── DEV.md                # ← questo file
 ```
 
+### Calcolatore "Chiusure"
+
+La pagina **Chiusure** semplifica i conteggi mensili raggruppando Incassi, Spese e Contanti effettivi. I contanti si calcolano dalle quantità di banconote per taglio più il totale degli spiccioli; i campi contanti vuoti valgono zero e va valorizzato almeno un campo. La pagina mostra ogni calcolo con importi, operatori e descrizioni; i valori restano nello stato locale e non vengono salvati.
+
+Il box finale propone le banconote da dare ai banconieri, privilegiando i tagli più grandi tra quelli disponibili. La quota viene arrotondata ai 5 € più vicini (102,49 € → 100 €; 102,50 € → 105 €). Gli spiccioli non sono usati per la consegna. Se i tagli attuali non consentono di comporre il totale, viene suggerito un cambio di pari valore con i pezzi da consegnare dopo il cambio; se le banconote non coprono la quota, viene segnalato che il cambio non basta. Il cambio è ipotetico, da effettuare prima della consegna: la quota originale e i contanti inseriti rimangono invariati.
+
 ---
 
 ## Modalità 1 — Esecuzione diretta (senza Docker)

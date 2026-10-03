@@ -26,6 +26,7 @@ import {
   IconSettings,
   IconLayoutDashboard,
   IconMail,
+  IconCalculator,
 } from "@tabler/icons-react";
 import { InvoicesPage } from "./invoices-page";
 import { SuppliersPage } from "./suppliers-page";
@@ -37,6 +38,7 @@ import { logout } from "@/lib/api/auth";
 import { fetchCurrentVersion } from "@/lib/api/backup";
 import { SettingsPage } from "./settings-page";
 import { PecInboxPage } from "./pec-inbox-page";
+import { ClosingPage } from "./closing-page";
 const DashboardPage = dynamic(
   async () => {
     const mod = await import("./dashboard-page");
@@ -45,9 +47,9 @@ const DashboardPage = dynamic(
   { ssr: false }
 );
 
-type Page = "dashboard" | "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings" | "pec" | "documents";
+type Page = "dashboard" | "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings" | "pec" | "documents" | "closing";
 
-const validPages: Page[] = ["dashboard", "invoices", "suppliers", "products", "price-lists", "members", "birthdays", "settings", "pec", "documents"];
+const validPages: Page[] = ["dashboard", "invoices", "suppliers", "products", "price-lists", "members", "birthdays", "settings", "pec", "documents", "closing"];
 
 const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] = [
   { label: "Dashboard", value: "dashboard", icon: IconLayoutDashboard },
@@ -181,6 +183,16 @@ export function AppLayout() {
             />
           </NavLink>
           <NavLink
+            label="Chiusure"
+            active={activePage === "closing"}
+            onClick={() => handleNavClick("closing")}
+            leftSection={
+              <ThemeIcon variant="light" size="sm">
+                <IconCalculator size={14} />
+              </ThemeIcon>
+            }
+          />
+          <NavLink
             label="Impostazioni"
             active={activePage === "settings"}
             onClick={() => handleNavClick("settings")}
@@ -203,6 +215,7 @@ export function AppLayout() {
         {activePage === "birthdays" && <BirthdaysPage />}
         {activePage === "settings" && <SettingsPage dbVersion={dbVersion} />}
         {activePage === "pec" && <PecInboxPage />}
+        {activePage === "closing" && <ClosingPage />}
       </AppShell.Main>
     </AppShell>
   );

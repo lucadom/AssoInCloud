@@ -28,6 +28,7 @@ The current domain models and features are:
 | PEC inbox | — | Read-only IMAP access; stateless message access; IMAP config stored in `settings` table |
 | App settings | `AppSetting` | Key-value settings table; currently stores PEC IMAP configuration |
 | Documents (documenti) | — | File system–based document storage; folder/file CRUD; ZIP download; bulk select/move/delete/download |
+| Monthly closing (chiusure) | — | Frontend-only monthly cash closing calculator; grouped income, expense, banknote-count, and coins inputs; live breakdowns; available-banknote payout rounded to nearest €5 (half up), preferring larger denominations; value-preserving exchange suggestions for uncomposable quotas, or warning when funds are insufficient; no database persistence |
 
 ---
 

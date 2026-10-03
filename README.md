@@ -18,6 +18,7 @@ consultare la casella PEC dell'associazione.
 | **Listini** | Gestione listini prezzi collegati ai prodotti |
 | **Backup** | Backup e ripristino del database tramite API |
 | **PEC** | Consultazione in sola lettura della casella PEC tramite IMAP (cartelle, messaggi, allegati) |
+| **Chiusure** | Calcolo in tempo reale della chiusura mensile con incassi, spese, conteggio banconote e spiccioli; proposta dei pezzi da dare ai banconieri, arrotondata ai 5 € più vicini (a metà verso l'alto); cambi di taglio suggeriti per totali non componibili e avviso per fondi insufficienti; valori non salvati |
 
 ## Architettura
 

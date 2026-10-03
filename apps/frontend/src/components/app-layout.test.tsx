@@ -22,6 +22,9 @@ vi.mock("./birthdays-page", () => ({
 vi.mock("./dashboard-page", () => ({
   DashboardPage: () => <div data-testid="dashboard-page">DashboardPage</div>,
 }));
+vi.mock("./closing-page", () => ({
+  ClosingPage: () => <div data-testid="closing-page">ClosingPage</div>,
+}));
 
 // Mock auth
 vi.mock("@/lib/api/auth", () => ({
@@ -60,6 +63,12 @@ describe("AppLayout", () => {
     expect(screen.getByText("Soci")).toBeInTheDocument();
     expect(screen.getByText("Elenco")).toBeInTheDocument();
     expect(screen.getByText("Compleanni")).toBeInTheDocument();
+    expect(screen.getByText("Chiusure")).toBeInTheDocument();
+    const navLabels = Array.from(
+      document.querySelectorAll(".mantine-NavLink-label"),
+      (label) => label.textContent
+    );
+    expect(navLabels.indexOf("Chiusure")).toBe(navLabels.indexOf("Impostazioni") - 1);
   });
 
   it("should render app title in header", () => {
@@ -126,6 +135,18 @@ describe("AppLayout", () => {
     expect(screen.queryByTestId("invoices-page")).not.toBeInTheDocument();
   });
 
+  it("should switch to ClosingPage when clicking Chiusure", () => {
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByText("Chiusure"));
+    expect(screen.getByTestId("closing-page")).toBeInTheDocument();
+    expect(mockPush).toHaveBeenCalledWith("/?page=closing");
+    expect(screen.getByText("Chiusure").closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
+  });
+
   it("should switch back to InvoicesPage from another page", () => {
     render(
       <TestWrapper>
@@ -146,6 +167,17 @@ describe("AppLayout", () => {
       </TestWrapper>
     );
     expect(screen.getByTestId("invoices-page")).toBeInTheDocument();
+  });
+
+  it("should load ClosingPage from the URL search param", () => {
+    currentSearchParams = new URLSearchParams("page=closing");
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    expect(screen.getByTestId("closing-page")).toBeInTheDocument();
+    expect(screen.getByText("Chiusure").closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
   });
 
   it("should default to dashboard when URL has unknown page param", async () => {
