@@ -28,7 +28,7 @@ The current domain models and features are:
 | PEC inbox | — | Read-only IMAP access; stateless message access; IMAP config stored in `settings` table |
 | App settings | `AppSetting` | Key-value settings table; currently stores PEC IMAP configuration |
 | Documents (documenti) | — | File system–based document storage; folder/file CRUD; ZIP download; bulk select/move/delete/download |
-| Monthly closing (chiusure) | — | Frontend-only monthly cash closing calculator; grouped income, expense, banknote-count, and coins inputs; live breakdowns; available-banknote payout rounded to nearest €5 (half up), preferring larger denominations; value-preserving exchange suggestions for uncomposable quotas, or warning when funds are insufficient; no database persistence |
+| Monthly closing (chiusure) | — | Frontend-only monthly cash closing calculator; stacked income (bar, tobacco, POS, slot share), expense, banknote-count, and coins inputs laid out two per row; live breakdowns; bartenders share computed as 26 % of effective bar income + slot share (slot share excluded from theoretical cash); available-banknote payout rounded to nearest €5 (half up), preferring larger denominations; value-preserving exchange suggestions for uncomposable quotas, or warning when funds are insufficient; no database persistence |
 
 ---
 
@@ -185,7 +185,7 @@ npm run test:run      # single pass (CI mode)
 **Running tests with coverage** (enforces the 70 % minimum):
 ```bash
 cd apps/frontend
-npm run coverage      # runs Vitest with --coverage; fails if coverage < 70 %
+npm run test:coverage      # runs Vitest with --coverage; fails if coverage < 70 %
 ```
 The HTML report is generated at `coverage/index.html`.
 
@@ -362,7 +362,7 @@ Controller  →  Service  →  External system (IMAP, HTTP, …)
 5. **Run all tests and verify coverage** after every meaningful change:
    ```bash
    cd apps/backend && ./mvnw verify          # tests + JaCoCo coverage ≥ 70 %
-   cd apps/frontend && npm run coverage      # tests + Vitest coverage ≥ 70 %
+   cd apps/frontend && npm run test:coverage      # tests + Vitest coverage ≥ 70 %
    ```
    Both commands must exit successfully (zero) before the change is
    considered done.
@@ -456,7 +456,7 @@ Level conventions:
 - **Don't write Italian code identifiers** — all code is in English.
 - **Don't skip tests** — every change must have corresponding test coverage.
 - **Don't let coverage drop below 70 %** — both backend (`./mvnw verify`) and
-  frontend (`npm run coverage`) must report ≥ 70 % line/branch coverage after
+  frontend (`npm run test:coverage`) must report ≥ 70 % line/branch coverage after
   every change.
 - **Don't use `ddl-auto=update`** — all schema changes go through Flyway.
 - **Don't hardcode configuration** — new external integrations (IMAP, SMTP, …)
@@ -488,7 +488,7 @@ When adding a new **persisted** feature (new entity + DB table):
 - [ ] UI component(s) with Italian labels
 - [ ] Run all tests and verify coverage ≥ 70 % in both projects:
       `cd apps/backend && ./mvnw verify`
-      `cd apps/frontend && npm run coverage`
+      `cd apps/frontend && npm run test:coverage`
 - [ ] Verify frontend build: `cd apps/frontend && npm run build`
 - [ ] Update `AGENTS.md` §1 (feature table), §2.3 (terminology), §5.3 (API list)
 - [ ] Update env var tables in `DEV.md` and `README.md`
@@ -507,7 +507,7 @@ When adding a new **stateless** feature (external integration, no DB):
 - [ ] UI component(s) with Italian labels; show an `Alert` when `notConfigured`
 - [ ] Run all tests and verify coverage ≥ 70 % in both projects:
       `cd apps/backend && ./mvnw verify`
-      `cd apps/frontend && npm run coverage`
+      `cd apps/frontend && npm run test:coverage`
 - [ ] Verify frontend build: `cd apps/frontend && npm run build`
 - [ ] Update `AGENTS.md` §1, §2.3, §5.3 (stateless section)
 - [ ] Update env var tables in `DEV.md` and `README.md`

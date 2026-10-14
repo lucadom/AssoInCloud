@@ -7,6 +7,7 @@ const moneyInputs = [
   ["Incasso bar", "100"],
   ["Incasso tabacchi", "50"],
   ["POS", "10"],
+  ["Quota slot", "0"],
   ["Spese contanti", "20"],
   ["Spese tabacchi", "5"],
 ] as const;
@@ -44,15 +45,24 @@ function getDisplayedResults() {
 }
 
 describe("ClosingPage", () => {
-  it("groups inputs into Incassi, Spese, and Contanti effettivi boxes", () => {
+  it("stacks Incassi, Spese, and Contanti effettivi vertically with paired inputs per row", () => {
     renderClosingPage();
 
     expect(screen.getByRole("heading", { name: "Chiusure" })).toBeInTheDocument();
-    for (const group of ["Incassi", "Spese", "Contanti effettivi"]) {
-      expect(screen.getByRole("heading", { name: group })).toBeInTheDocument();
-    }
-    const cashBox = screen.getByRole("heading", { name: "Contanti effettivi" }).closest(".mantine-Paper-root");
-    expect(cashBox?.parentElement).toHaveStyle({ gridColumn: "1 / -1" });
+    const headings = ["Incassi", "Spese", "Contanti effettivi"].map(
+      (group) => screen.getByRole("heading", { name: group })
+    );
+    expect(headings[0].compareDocumentPosition(headings[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(headings[1].compareDocumentPosition(headings[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const incomeBox = headings[0].closest(".mantine-Paper-root")!;
+    const incomeGrid = incomeBox.querySelector(".mantine-SimpleGrid-root")!;
+    expect(Array.from(incomeGrid.querySelectorAll("input"), (input) => input.getAttribute("aria-label")))
+      .toEqual(["Incasso bar", "Incasso tabacchi", "POS", "Quota slot"]);
+    const expenseBox = headings[1].closest(".mantine-Paper-root")!;
+    const expenseGrid = expenseBox.querySelector(".mantine-SimpleGrid-root")!;
+    expect(Array.from(expenseGrid.querySelectorAll("input"), (input) => input.getAttribute("aria-label")))
+      .toEqual(["Spese contanti", "Spese tabacchi"]);
     for (const [label] of moneyInputs) {
       expect(screen.getByRole("textbox", { name: label })).toBeInTheDocument();
     }
@@ -82,6 +92,7 @@ describe("ClosingPage", () => {
       "115,00\u00a0€",
       "5,00\u00a0€",
       "105,00\u00a0€",
+      "105,00\u00a0€",
       "27,30\u00a0€",
     ]);
     const breakdown = screen.getByRole("region", { name: "Riepilogo calcoli" });
@@ -103,6 +114,7 @@ describe("ClosingPage", () => {
         ["Incasso bar", "900"],
         ["Incasso tabacchi", "10"],
         ["POS", "0"],
+        ["Quota slot", "0"],
         ["Spese contanti", "0"],
         ["Spese tabacchi", "0"],
       ],
@@ -117,6 +129,7 @@ describe("ClosingPage", () => {
       "902,50\u00a0€",
       "910,00\u00a0€",
       "-7,50\u00a0€",
+      "892,50\u00a0€",
       "892,50\u00a0€",
       "232,05\u00a0€",
     ]);
@@ -154,10 +167,15 @@ describe("ClosingPage", () => {
     expect(within(breakdown).getByRole("group", { name: "Risultato Contanti teorici" }))
       .toHaveTextContent("=");
 
+    const bartendersBase = within(breakdown).getByRole("list", { name: "Dettaglio Base quota banconieri" });
+    expect(within(bartendersBase).getByText("Incasso bar effettivo")).toBeInTheDocument();
+    expect(within(bartendersBase).getByText("Quota slot")).toBeInTheDocument();
+    expect(within(bartendersBase).getByText("+")).toBeInTheDocument();
+
     const bartendersShare = within(breakdown).getByRole("list", { name: "Dettaglio Quota banconieri" });
     expect(within(bartendersShare).getByText("26%")).toBeInTheDocument();
     expect(within(bartendersShare).getByText("Aliquota banconieri")).toBeInTheDocument();
-    expect(within(bartendersShare).getByText("Incasso bar effettivo")).toBeInTheDocument();
+    expect(within(bartendersShare).getByText("Base quota banconieri")).toBeInTheDocument();
     expect(within(bartendersShare).getByText("×")).toBeInTheDocument();
     expect(within(breakdown).getByRole("group", { name: "Risultato Quota banconieri" }))
       .toHaveTextContent("=");
@@ -175,8 +193,26 @@ describe("ClosingPage", () => {
       "115,00\u00a0€",
       "25,00\u00a0€",
       "125,00\u00a0€",
+      "125,00\u00a0€",
       "32,50\u00a0€",
     ]);
+  });
+
+  it("adds the slot share to the effective bar income for the bartenders share without touching theoretical cash", () => {
+    renderClosingPage();
+    enterAmounts();
+    fireEvent.change(screen.getByRole("textbox", { name: "Quota slot" }), { target: { value: "95" } });
+
+    expect(getDisplayedResults()).toEqual([
+      "120,00\u00a0€",
+      "115,00\u00a0€",
+      "5,00\u00a0€",
+      "105,00\u00a0€",
+      "200,00\u00a0€",
+      "52,00\u00a0€",
+    ]);
+    const theoreticalCash = screen.getByRole("list", { name: "Dettaglio Contanti teorici" });
+    expect(within(theoreticalCash).queryByText("Quota slot")).not.toBeInTheDocument();
   });
 
   it("rounds the 26 percent share to the nearest cent", () => {
@@ -186,6 +222,7 @@ describe("ClosingPage", () => {
         ["Incasso bar", "0,25"],
         ["Incasso tabacchi", "0"],
         ["POS", "0"],
+        ["Quota slot", "0"],
         ["Spese contanti", "0"],
         ["Spese tabacchi", "0"],
       ],
@@ -196,6 +233,7 @@ describe("ClosingPage", () => {
       "0,25\u00a0€",
       "0,25\u00a0€",
       "0,00\u00a0€",
+      "0,25\u00a0€",
       "0,25\u00a0€",
       "0,07\u00a0€",
     ]);
@@ -225,6 +263,7 @@ describe("ClosingPage", () => {
         ["Incasso bar", "400"],
         ["Incasso tabacchi", "205"],
         ["POS", "0"],
+        ["Quota slot", "0"],
         ["Spese contanti", "0"],
         ["Spese tabacchi", "0"],
       ],
@@ -255,7 +294,8 @@ describe("ClosingPage", () => {
     renderClosingPage();
     enterAmounts(
       [
-        ["Incasso bar", "400"], ["Incasso tabacchi", tobacco], ["POS", "0"],
+        ["Incasso bar", "400"], ["Incasso tabacchi", tobacco], ["POS", "0"], ["Quota slot", "0"],
+        ["Quota slot", "0"],
         ["Spese contanti", "0"], ["Spese tabacchi", "0"],
       ],
       [["Pezzi da 500 €", "1"], ["Pezzi da 100 €", "1"]]
@@ -270,7 +310,8 @@ describe("ClosingPage", () => {
     renderClosingPage();
     enterAmounts(
       [
-        ["Incasso bar", "100"], ["Incasso tabacchi", "0"], ["POS", "0"],
+        ["Incasso bar", "100"], ["Incasso tabacchi", "0"], ["POS", "0"], ["Quota slot", "0"],
+        ["Quota slot", "0"],
         ["Spese contanti", "0"], ["Spese tabacchi", "0"],
       ],
       [["Spiccioli", "100"]]

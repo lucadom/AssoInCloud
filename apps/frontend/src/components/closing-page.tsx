@@ -18,6 +18,7 @@ const incomeFields = [
   { key: "barIncome", label: "Incasso bar" },
   { key: "tobaccoIncome", label: "Incasso tabacchi" },
   { key: "pos", label: "POS" },
+  { key: "slotIncome", label: "Quota slot" },
 ] as const;
 
 const expenseFields = [
@@ -75,6 +76,7 @@ export function ClosingPage() {
     barIncome: "",
     tobaccoIncome: "",
     pos: "",
+    slotIncome: "",
     cashExpenses: "",
     tobaccoExpenses: "",
   });
@@ -108,11 +110,12 @@ export function ClosingPage() {
   const cashHasEntry = Object.values(cashAmounts).some((value) => value.trim() !== "");
   const cashInputsValid = Object.values(parsedCashAmounts).every((value) => value !== null);
   const calculations = useMemo(() => {
-    const { barIncome, tobaccoIncome, pos, cashExpenses, tobaccoExpenses } = parsedAmounts;
+    const { barIncome, tobaccoIncome, pos, slotIncome, cashExpenses, tobaccoExpenses } = parsedAmounts;
     if (
       barIncome === null ||
       tobaccoIncome === null ||
       pos === null ||
+      slotIncome === null ||
       cashExpenses === null ||
       tobaccoExpenses === null ||
       !cashHasEntry ||
@@ -141,7 +144,8 @@ export function ClosingPage() {
       operator: "+",
       description: "Spiccioli",
     });
-    const bartendersShare = roundToCents(effectiveBarIncome, BigInt(26));
+    const bartendersBase = effectiveBarIncome + slotIncome;
+    const bartendersShare = roundToCents(bartendersBase, BigInt(26));
     const roundedShare = roundCashShare(bartendersShare);
     const availableBanknotes = banknoteFields.map(({ key }) => parsedCashAmounts[key]!);
     const banknoteAllocation = bartendersShare < ZERO ? null : allocateBanknotes(roundedShare, availableBanknotes);
@@ -151,12 +155,13 @@ export function ClosingPage() {
     const exchangePayoutEntries = exchange !== null ? banknoteEntries(exchange.allocation) : null;
 
     return {
-      amounts: { barIncome, tobaccoIncome, pos, cashExpenses, tobaccoExpenses },
+      amounts: { barIncome, tobaccoIncome, pos, slotIncome, cashExpenses, tobaccoExpenses },
       actualCash,
       actualCashEntries,
       theoreticalCash,
       cashDifference,
       effectiveBarIncome,
+      bartendersBase,
       bartendersShare,
       roundedShare,
       payoutEntries,
@@ -165,6 +170,25 @@ export function ClosingPage() {
     };
   }, [cashHasEntry, cashInputsValid, parsedAmounts, parsedCashAmounts]);
 
+  const renderMoneyInput = (key: MoneyField, label: string) => (
+    <TextInput
+      key={key}
+      label={label}
+      aria-label={label}
+      inputMode="decimal"
+      value={amounts[key]}
+      onChange={(event) => {
+        const value = event.currentTarget.value;
+        setAmounts((current) => ({ ...current, [key]: value }));
+      }}
+      rightSection={<Text size="sm" c="dimmed">€</Text>}
+      rightSectionWidth={40}
+      error={amounts[key] !== "" && parsedAmounts[key] === null
+        ? "Inserisci un importo valido con massimo due decimali."
+        : undefined}
+    />
+  );
+
   return (
     <Stack gap="xl" maw={900}>
       <Title order={2}>Chiusure</Title>
@@ -172,93 +196,61 @@ export function ClosingPage() {
         Inserisci i valori della chiusura mensile. I dati restano in questa pagina e non vengono salvati.
       </Text>
 
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
+      <Stack gap="md">
         <InputGroup title="Incassi">
-          {incomeFields.map(({ key, label }) => (
-            <TextInput
-              key={key}
-              label={label}
-              aria-label={label}
-              inputMode="decimal"
-              value={amounts[key]}
-              onChange={(event) => {
-                const value = event.currentTarget.value;
-                setAmounts((current) => ({ ...current, [key]: value }));
-              }}
-              rightSection={<Text size="sm" c="dimmed">€</Text>}
-              rightSectionWidth={40}
-              error={amounts[key] !== "" && parsedAmounts[key] === null
-                ? "Inserisci un importo valido con massimo due decimali."
-                : undefined}
-            />
-          ))}
+          <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            {incomeFields.map(({ key, label }) => renderMoneyInput(key, label))}
+          </SimpleGrid>
         </InputGroup>
 
         <InputGroup title="Spese">
-          {expenseFields.map(({ key, label }) => (
-            <TextInput
-              key={key}
-              label={label}
-              aria-label={label}
-              inputMode="decimal"
-              value={amounts[key]}
-              onChange={(event) => {
-                const value = event.currentTarget.value;
-                setAmounts((current) => ({ ...current, [key]: value }));
-              }}
-              rightSection={<Text size="sm" c="dimmed">€</Text>}
-              rightSectionWidth={40}
-              error={amounts[key] !== "" && parsedAmounts[key] === null
-                ? "Inserisci un importo valido con massimo due decimali."
-                : undefined}
-            />
-          ))}
+          <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            {expenseFields.map(({ key, label }) => renderMoneyInput(key, label))}
+          </SimpleGrid>
         </InputGroup>
 
-        <div style={{ gridColumn: "1 / -1" }}>
-          <InputGroup title="Contanti effettivi">
-            <SimpleGrid cols={{ base: 2, sm: 4 }} role="group" aria-label="Tagli banconote">
-              {banknoteFields.map(({ key, label }) => (
-                <TextInput
-                  key={key}
-                  label={label}
-                  aria-label={label}
-                  inputMode="numeric"
-                  value={cashAmounts[key]}
-                  onChange={(event) => {
-                    const value = event.currentTarget.value;
-                    setCashAmounts((current) => ({ ...current, [key]: value }));
-                  }}
-                  rightSection={<Text size="sm" c="dimmed">pz</Text>}
-                  rightSectionWidth={40}
-                  error={cashAmounts[key] !== "" && parsedCashAmounts[key] === null
-                    ? "Inserisci un numero intero non negativo oppure lascia il campo vuoto."
-                    : undefined}
-                />
-              ))}
-            </SimpleGrid>
-            <TextInput
-              label="Spiccioli"
-              aria-label="Spiccioli"
-              inputMode="decimal"
-              value={cashAmounts.coins}
-              onChange={(event) => {
-                const value = event.currentTarget.value;
-                setCashAmounts((current) => ({ ...current, coins: value }));
-              }}
-              rightSection={<Text size="sm" c="dimmed">€</Text>}
-              rightSectionWidth={40}
-              error={cashAmounts.coins !== "" && parsedCashAmounts.coins === null
-                ? "Inserisci un importo valido con massimo due decimali."
-                : undefined}
-              description="Importo totale degli spiccioli"
-            />
-            <Text size="xs" c="dimmed">
-              I campi vuoti valgono zero. Compila almeno un campo dei contanti.
-            </Text>
-          </InputGroup>
-        </div>
-      </SimpleGrid>
+        <InputGroup title="Contanti effettivi">
+          <SimpleGrid cols={{ base: 2, sm: 4 }} role="group" aria-label="Tagli banconote">
+            {banknoteFields.map(({ key, label }) => (
+              <TextInput
+                key={key}
+                label={label}
+                aria-label={label}
+                inputMode="numeric"
+                value={cashAmounts[key]}
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  setCashAmounts((current) => ({ ...current, [key]: value }));
+                }}
+                rightSection={<Text size="sm" c="dimmed">pz</Text>}
+                rightSectionWidth={40}
+                error={cashAmounts[key] !== "" && parsedCashAmounts[key] === null
+                  ? "Inserisci un numero intero non negativo oppure lascia il campo vuoto."
+                  : undefined}
+              />
+            ))}
+          </SimpleGrid>
+          <TextInput
+            label="Spiccioli"
+            aria-label="Spiccioli"
+            inputMode="decimal"
+            value={cashAmounts.coins}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setCashAmounts((current) => ({ ...current, coins: value }));
+            }}
+            rightSection={<Text size="sm" c="dimmed">€</Text>}
+            rightSectionWidth={40}
+            error={cashAmounts.coins !== "" && parsedCashAmounts.coins === null
+              ? "Inserisci un importo valido con massimo due decimali."
+              : undefined}
+            description="Importo totale degli spiccioli"
+          />
+          <Text size="xs" c="dimmed">
+            I campi vuoti valgono zero. Compila almeno un campo dei contanti.
+          </Text>
+        </InputGroup>
+      </Stack>
 
       {calculations ? (
         <Paper withBorder p="md" role="region" aria-label="Riepilogo calcoli" aria-live="polite">
@@ -297,9 +289,17 @@ export function ClosingPage() {
               result={calculations.effectiveBarIncome}
             />
             <CalculationRow
-              label="Quota banconieri"
+              label="Base quota banconieri"
               entries={[
                 { amount: calculations.effectiveBarIncome, operator: "", description: "Incasso bar effettivo" },
+                { amount: calculations.amounts.slotIncome, operator: "+", description: "Quota slot" },
+              ]}
+              result={calculations.bartendersBase}
+            />
+            <CalculationRow
+              label="Quota banconieri"
+              entries={[
+                { amount: calculations.bartendersBase, operator: "", description: "Base quota banconieri" },
                 { amount: "26%", operator: "×", description: "Aliquota banconieri" },
               ]}
               result={calculations.bartendersShare}
@@ -308,7 +308,7 @@ export function ClosingPage() {
         </Paper>
       ) : (
         <Alert color="blue" title="Dati incompleti">
-          Inserisci i cinque importi di Incassi e Spese e valorizza almeno un campo dei Contanti effettivi.
+          Inserisci i sei importi di Incassi e Spese e valorizza almeno un campo dei Contanti effettivi.
           I campi contanti vuoti valgono zero.
         </Alert>
       )}
