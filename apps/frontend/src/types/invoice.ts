@@ -91,6 +91,13 @@ export interface ImportResult {
   skipped: number;
 }
 
+/** Monthly total for an invoice supplier. */
+export interface InvoiceMonthlySummary {
+  year: number;
+  month: number;
+  totalAmount: number;
+}
+
 /** Product search result from invoice line items */
 export interface ProductSearchResult {
   lineItemId: string;

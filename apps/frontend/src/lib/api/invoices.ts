@@ -1,4 +1,4 @@
-import type { Invoice, InvoiceFormData, ImportResult } from "@/types";
+import type { Invoice, InvoiceFormData, ImportResult, InvoiceMonthlySummary } from "@/types";
 import { authFetch } from "./auth-fetch";
 import { getToken } from "./auth";
 import { logger } from "../logger";
@@ -12,6 +12,17 @@ export async function fetchInvoices(): Promise<Invoice[]> {
   if (!res.ok) {
     logger.error("Failed to fetch invoices", res.status);
     throw new Error("Errore nel caricamento delle fatture");
+  }
+  return res.json();
+}
+
+/** Fetch monthly totals for a supplier, with credit notes already subtracted */
+export async function fetchInvoiceMonthlySummary(supplierId: string): Promise<InvoiceMonthlySummary[]> {
+  logger.info("Fetching monthly invoice summary", { supplierId });
+  const res = await authFetch(`/invoices/monthly-summary?supplierId=${encodeURIComponent(supplierId)}`);
+  if (!res.ok) {
+    logger.error("Failed to fetch monthly invoice summary", { supplierId, status: res.status });
+    throw new Error("Errore nel caricamento del confronto delle fatture");
   }
   return res.json();
 }

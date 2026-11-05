@@ -29,6 +29,7 @@ import {
   IconCalculator,
 } from "@tabler/icons-react";
 import { InvoicesPage } from "./invoices-page";
+import { InvoiceComparisonPage } from "./invoice-comparison-page";
 import { SuppliersPage } from "./suppliers-page";
 import { ProductsPage } from "./products-page";
 import { PriceListPage } from "./price-list-page";
@@ -47,9 +48,9 @@ const DashboardPage = dynamic(
   { ssr: false }
 );
 
-type Page = "dashboard" | "invoices" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings" | "pec" | "documents" | "closing";
+type Page = "dashboard" | "invoices" | "invoice-comparison" | "suppliers" | "products" | "price-lists" | "members" | "birthdays" | "settings" | "pec" | "documents" | "closing";
 
-const validPages: Page[] = ["dashboard", "invoices", "suppliers", "products", "price-lists", "members", "birthdays", "settings", "pec", "documents", "closing"];
+const validPages: Page[] = ["dashboard", "invoices", "invoice-comparison", "suppliers", "products", "price-lists", "members", "birthdays", "settings", "pec", "documents", "closing"];
 
 const navItems: { label: string; value: Page; icon: typeof IconFileInvoice }[] = [
   { label: "Dashboard", value: "dashboard", icon: IconLayoutDashboard },
@@ -140,6 +141,29 @@ export function AppLayout() {
       <AppShell.Navbar p="md">
         <AppShell.Section grow>
           {navItems.map((item) => (
+            item.value === "invoices" ? (
+              <NavLink
+                key={item.value}
+                label={item.label}
+                active={activePage === "invoices" || activePage === "invoice-comparison"}
+                leftSection={
+                  <ThemeIcon variant="light" size="sm">
+                    <item.icon size={14} />
+                  </ThemeIcon>
+                }
+              >
+                <NavLink
+                  label="Elenco"
+                  active={activePage === "invoices"}
+                  onClick={() => handleNavClick("invoices")}
+                />
+                <NavLink
+                  label="Confronto"
+                  active={activePage === "invoice-comparison"}
+                  onClick={() => handleNavClick("invoice-comparison")}
+                />
+              </NavLink>
+            ) : (
             <NavLink
               key={item.value}
               label={item.label}
@@ -151,6 +175,7 @@ export function AppLayout() {
                 </ThemeIcon>
               }
             />
+            )
           ))}
           <NavLink
             label="Soci"
@@ -208,6 +233,7 @@ export function AppLayout() {
       <AppShell.Main>
         {activePage === "dashboard" && <DashboardPage />}
         {activePage === "invoices" && <InvoicesPage />}
+        {activePage === "invoice-comparison" && <InvoiceComparisonPage />}
         {activePage === "suppliers" && <SuppliersPage />}
         {activePage === "products" && <ProductsPage />}
         {activePage === "price-lists" && <PriceListPage />}

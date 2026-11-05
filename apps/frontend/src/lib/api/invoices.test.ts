@@ -17,6 +17,7 @@ import {
   deleteInvoice,
   uploadCsv,
   uploadInvoiceFiles,
+  fetchInvoiceMonthlySummary,
   getAttachmentUrl,
   getSourceFileUrl,
 } from "./invoices";
@@ -80,6 +81,25 @@ describe("invoices API", () => {
     it("should throw on error response", async () => {
       mockAuthFetch.mockResolvedValue(jsonResponse(null, false, 500));
       await expect(fetchInvoices()).rejects.toThrow("Errore nel caricamento delle fatture");
+    });
+  });
+
+  describe("fetchInvoiceMonthlySummary", () => {
+    it("should fetch monthly totals for the selected supplier", async () => {
+      const summaries = [{ year: 2025, month: 1, totalAmount: 120 }];
+      mockAuthFetch.mockResolvedValue(jsonResponse(summaries));
+
+      await expect(fetchInvoiceMonthlySummary("supplier id")).resolves.toEqual(summaries);
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        "/invoices/monthly-summary?supplierId=supplier%20id"
+      );
+    });
+
+    it("should throw when the monthly summary request fails", async () => {
+      mockAuthFetch.mockResolvedValue(jsonResponse(null, false, 500));
+      await expect(fetchInvoiceMonthlySummary("s1")).rejects.toThrow(
+        "Errore nel caricamento del confronto delle fatture"
+      );
     });
   });
 

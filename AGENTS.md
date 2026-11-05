@@ -19,7 +19,7 @@ The current domain models and features are:
 
 | Feature | Domain | Notes |
 |---------|--------|-------|
-| Invoices (fatture) | `Invoice`, `InvoiceLineItem`, `InvoiceAttachment`, `InvoiceSourceFile` | Import via CSV and FatturaPA XML/P7M; retains original XML/P7M source files for direct and PEC imports |
+| Invoices (fatture) | `Invoice`, `InvoiceLineItem`, `InvoiceAttachment`, `InvoiceSourceFile` | Import via CSV and FatturaPA XML/P7M; retains original XML/P7M source files for direct and PEC imports; multi-supplier comparison of VAT-inclusive monthly totals, one chart line per supplier/year pair, with selectable years and credit notes subtracted |
 | Suppliers (fornitori) | `Supplier` | Auto-created during invoice import |
 | Members (soci) | `Member`, `MembershipYear` | Registry with fiscal code; CSV/XLSX import and export; advanced CSV import wizard with column mapping, row-level preview, and optional active-year assignment; annual membership year tracking; active/inactive status derived from current-year presence |
 | Price lists (listini) | `PriceListItem` | Linked to products; per-supplier price list derived from invoice line items grouped by description, unit of measure, unit price and discount percentage; shows effective price after discount; XLSX and PDF export with supplier header and optional date range filter |
@@ -289,11 +289,13 @@ src/
 2. Add an entry to the `navItems` array with `label`, `value`, and an icon from `@tabler/icons-react`.
 3. Import the new page component and render it conditionally inside `<AppShell.Main>`.
 
+Invoice pages are grouped under "Fatture" with "Elenco" and "Confronto" children. Keep `page=invoices` for the existing invoice list when adding related pages.
+
 ### 5.3 REST API conventions
 
 - Base path: `/api/`
 - Current resources:
-  - `/api/invoices` — invoice CRUD, CSV/XML/P7M import, original source-file download (`GET /{id}/source-file`), XLSX export
+  - `/api/invoices` — invoice CRUD, CSV/XML/P7M import, original source-file download (`GET /{id}/source-file`), XLSX export, supplier monthly totals (`GET /monthly-summary?supplierId={supplierId}`; returns year, month, and signed total including VAT)
   - `/api/suppliers` — supplier CRUD
   - `/api/members` — member CRUD, CSV/XLSX import/export, annual membership year tracking, renewal (`POST /{id}/renew`), active member filtering (`GET /active`), active member XLSX export (`GET /export-xlsx-active`); improved CSV import wizard: column mapping preview (`POST /preview-csv`), confirm with optional active-year assignment (`POST /confirm-csv-import`)
   - `/api/products` — product search

@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import it.assoincloud.backend.dto.ImportResultDto;
 import it.assoincloud.backend.dto.InvoiceDto;
 import it.assoincloud.backend.dto.InvoiceFormData;
+import it.assoincloud.backend.dto.InvoiceMonthlySummaryDto;
 import it.assoincloud.backend.entity.InvoiceAttachment;
 import it.assoincloud.backend.entity.InvoiceSourceFile;
 import it.assoincloud.backend.service.InvoiceService;
@@ -46,6 +47,11 @@ public class InvoiceController {
     @GetMapping
     public List<InvoiceDto> list() {
         return invoiceService.findAll().stream().map(InvoiceDto::from).toList();
+    }
+
+    @GetMapping("/monthly-summary")
+    public List<InvoiceMonthlySummaryDto> monthlySummary(@RequestParam String supplierId) {
+        return invoiceService.findMonthlySummaryBySupplierId(supplierId);
     }
 
     @GetMapping("/{id}")

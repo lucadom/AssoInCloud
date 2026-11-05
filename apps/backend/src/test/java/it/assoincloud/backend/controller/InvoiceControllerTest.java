@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.assoincloud.backend.service.InvoiceService;
+import it.assoincloud.backend.dto.InvoiceFormData;
 
 /**
  * Integration tests for InvoiceController + InvoiceService (full stack with in-memory SQLite).
@@ -153,6 +155,37 @@ class InvoiceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.invoiceNumber", is("FT/GET/001")))
                 .andExpect(jsonPath("$.viewed", is(true)));
+    }
+
+    @Test
+    void monthlySummaryShouldSubtractCreditNotesAndFillMissingMonths() throws Exception {
+        invoiceService.create(new InvoiceFormData(
+                "TD01", "FT/COMPARE/001", "2024-01-15", "Compare SRL", "IT55555555555",
+                new BigDecimal("100.00"), new BigDecimal("22.00"), "", false));
+        invoiceService.create(new InvoiceFormData(
+                "TD04", "NC/COMPARE/001", "2024-01-20", "Compare SRL", "IT55555555555",
+                new BigDecimal("10.00"), new BigDecimal("2.20"), "", false));
+        invoiceService.create(new InvoiceFormData(
+                "Nota di credito", "NC/COMPARE/002", "2024-02-20", "Compare SRL", "IT55555555555",
+                new BigDecimal("5.00"), new BigDecimal("1.10"), "", false));
+        invoiceService.create(new InvoiceFormData(
+                "TD01", "FT/COMPARE/002", "2025-03-15", "Compare SRL", "IT55555555555",
+                new BigDecimal("50.00"), new BigDecimal("11.00"), "", false));
+
+        mockMvc.perform(get("/api/invoices/monthly-summary")
+                        .param("supplierId", invoiceService.findAll().get(0).getSupplier().getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(24)))
+                .andExpect(jsonPath("$[0].year", is(2024)))
+                .andExpect(jsonPath("$[0].month", is(1)))
+                .andExpect(jsonPath("$[0].totalAmount", is(109.8)))
+                .andExpect(jsonPath("$[1].month", is(2)))
+                .andExpect(jsonPath("$[1].totalAmount", is(-6.1)))
+                .andExpect(jsonPath("$[2].month", is(3)))
+                .andExpect(jsonPath("$[2].totalAmount", is(0.0)))
+                .andExpect(jsonPath("$[12].year", is(2025)))
+                .andExpect(jsonPath("$[14].month", is(3)))
+                .andExpect(jsonPath("$[14].totalAmount", is(61.0)));
     }
 
     @Test

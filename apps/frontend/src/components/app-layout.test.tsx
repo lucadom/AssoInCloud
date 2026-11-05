@@ -7,6 +7,9 @@ import { TestWrapper } from "@/test-utils";
 vi.mock("./invoices-page", () => ({
   InvoicesPage: () => <div data-testid="invoices-page">InvoicesPage</div>,
 }));
+vi.mock("./invoice-comparison-page", () => ({
+  InvoiceComparisonPage: () => <div data-testid="invoice-comparison-page">InvoiceComparisonPage</div>,
+}));
 vi.mock("./suppliers-page", () => ({
   SuppliersPage: () => <div data-testid="suppliers-page">SuppliersPage</div>,
 }));
@@ -61,7 +64,8 @@ describe("AppLayout", () => {
     expect(screen.getByText("Fornitori")).toBeInTheDocument();
     expect(screen.getByText("Prodotti")).toBeInTheDocument();
     expect(screen.getByText("Soci")).toBeInTheDocument();
-    expect(screen.getByText("Elenco")).toBeInTheDocument();
+    expect(screen.getAllByText("Elenco")).toHaveLength(2);
+    expect(screen.getByText("Confronto")).toBeInTheDocument();
     expect(screen.getByText("Compleanni")).toBeInTheDocument();
     expect(screen.getByText("Chiusure")).toBeInTheDocument();
     const navLabels = Array.from(
@@ -91,15 +95,30 @@ describe("AppLayout", () => {
     });
   });
 
-  it("should show InvoicesPage when clicking Fatture", () => {
+  it("should show InvoicesPage when clicking Elenco under Fatture", () => {
     render(
       <TestWrapper>
         <AppLayout />
       </TestWrapper>
     );
-    fireEvent.click(screen.getByText("Fatture"));
+    fireEvent.click(screen.getAllByText("Elenco")[0]);
     expect(screen.getByTestId("invoices-page")).toBeInTheDocument();
     expect(mockPush).toHaveBeenCalledWith("/?page=invoices");
+    expect(screen.getByText("Fatture").closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
+    expect(screen.getAllByText("Elenco")[0].closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
+  });
+
+  it("should show and highlight the comparison page", () => {
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByText("Confronto"));
+    expect(screen.getByTestId("invoice-comparison-page")).toBeInTheDocument();
+    expect(mockPush).toHaveBeenCalledWith("/?page=invoice-comparison");
+    expect(screen.getByText("Fatture").closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
+    expect(screen.getByText("Confronto").closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
   });
 
   it("should switch to SuppliersPage when clicking Fornitori", () => {
@@ -155,7 +174,7 @@ describe("AppLayout", () => {
     );
     fireEvent.click(screen.getByText("Fornitori"));
     expect(screen.getByTestId("suppliers-page")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Fatture"));
+    fireEvent.click(screen.getAllByText("Elenco")[0]);
     expect(screen.getByTestId("invoices-page")).toBeInTheDocument();
   });
 
@@ -178,6 +197,18 @@ describe("AppLayout", () => {
     );
     expect(screen.getByTestId("closing-page")).toBeInTheDocument();
     expect(screen.getByText("Chiusure").closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
+  });
+
+  it("should load and highlight the comparison page from the URL", () => {
+    currentSearchParams = new URLSearchParams("page=invoice-comparison");
+    render(
+      <TestWrapper>
+        <AppLayout />
+      </TestWrapper>
+    );
+    expect(screen.getByTestId("invoice-comparison-page")).toBeInTheDocument();
+    expect(screen.getByText("Fatture").closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
+    expect(screen.getByText("Confronto").closest(".mantine-NavLink-root")).toHaveAttribute("data-active", "true");
   });
 
   it("should default to dashboard when URL has unknown page param", async () => {

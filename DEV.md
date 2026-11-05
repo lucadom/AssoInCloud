@@ -37,6 +37,10 @@ La pagina **Chiusure** semplifica i conteggi mensili raggruppando Incassi, Spese
 
 Il box finale propone le banconote da dare ai banconieri, privilegiando i tagli più grandi tra quelli disponibili. La quota viene arrotondata ai 5 € più vicini (102,49 € → 100 €; 102,50 € → 105 €). Gli spiccioli non sono usati per la consegna. Se i tagli attuali non consentono di comporre il totale, viene suggerito un cambio di pari valore con i pezzi da consegnare dopo il cambio; se le banconote non coprono la quota, viene segnalato che il cambio non basta. Il cambio è ipotetico, da effettuare prima della consegna: la quota originale e i contanti inseriti rimangono invariati.
 
+### Confronto fatture
+
+Nel gruppo **Fatture** della navigazione, la pagina **Confronto** permette di selezionare uno o più fornitori e confrontare da gennaio a dicembre i totali delle fatture, con una linea etichettata per ogni coppia fornitore/anno con fatture. A ogni modifica dei fornitori selezionati vengono selezionati tutti gli anni disponibili tra quei fornitori; il filtro consente di mostrare solo gli anni desiderati. I totali includono l'IVA e sottraggono le note di credito. Non sono richieste nuove variabili di configurazione.
+
 ---
 
 ## Modalità 1 — Esecuzione diretta (senza Docker)
